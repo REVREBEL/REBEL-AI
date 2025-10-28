@@ -1,0 +1,159 @@
+{
+  "metadata": {
+    "name": "REVREBEL Brand Guide",
+    "version": "1.0.0",
+    "description": "AI-consumable style and identity guide for content, prompts, and designs aligned with REVREBEL's branding."
+  },
+  "identity": {
+    "name_usage": {
+      "correct": "REVREBEL",
+      "incorrect_examples": ["RevRebel", "Revrebel"]
+    },
+    "tagline": "Revenue strategy meets creative rebellion"
+  },
+  "visual_identity": {
+    "colors": [
+      { "hex": "#163666", "name": "Dark Blue", "inverse": "#B2D3DE", "role": "Primary" },
+      { "hex": "#047C97", "name": "Dark Green", "inverse": "#EFF5F6" },
+      { "hex": "#00A6B6", "name": "Green", "inverse": "#FACA78" },
+      { "hex": "#71C9C5", "name": "Light Green", "inverse": "#8E456A", "role": "Accent" },
+      { "hex": "#B2D3DE", "name": "Light Blue", "inverse": "#163666", "role": "Secondary" },
+      { "hex": "#FACA78", "name": "Yellow", "inverse": "#E05047" },
+      { "hex": "#F37D59", "name": "Orange", "inverse": "#163666" },
+      { "hex": "#E05047", "name": "Red", "inverse": "#B2D3DE" },
+      { "hex": "#8E456A", "name": "Purple", "inverse": "#F37D59" },
+      { "hex": "#FAFAFA", "name": "White", "inverse": "#163666", "role": "Neutral" },
+      { "hex": "#EFF5F6", "name": "Smoke", "inverse": "#163666" },
+      { "hex": "#ABABAB", "name": "Grey 1" },
+      { "hex": "#575757", "name": "Grey 2" },
+      { "hex": "#2E2E2E", "name": "Grey 3" }
+    ],
+    "typography": {
+      "headlines": {
+        "font": "Khand",
+        "transform": "uppercase",
+        "fallbacks": ["Oswald", "Impact", "sans-serif"],
+        "weights": {
+          "h1-h4": 700,
+          "h5-h6": 600
+        }
+      },
+      "body": {
+        "font": "General Sans",
+        "fallbacks": ["Public Sans", "Open Sans", "Tahoma", "sans-serif"],
+        "weights": [300, 400],
+        "context": "Use 300/400 on dark backgrounds"
+      },
+      "cdn": "https://cdn.jsdelivr.net/gh/REVREBEL/fonts@main/rebel-fonts.css"
+    },
+    "logos": {
+      "primary": "https://res.cloudinary.com/revrebel/image/upload/v1761516148/RR/Logos/revrebel-logo.png",
+      "stacked": "https://res.cloudinary.com/revrebel/image/upload/v1761516160/RR/Logos/revrebel-logo-stacked.png",
+      "circle": "https://res.cloudinary.com/revrebel/image/upload/v1758704369/RR/Logos/revrebel-green-circle-logo_sbindx.svg",
+      "asset_folder": "https://drive.google.com/open?id=1p0Tn4b4WYFv_d0OVHEmhe6d1lNOTKNr5&usp=drive_fs"
+    }
+  },
+  "content_guidance": {
+    "writing_style": {
+      "voice": "Confident, clever, strategically rebellious",
+      "tone": "Plainspoken, witty, performance-driven",
+      "attributes": [
+        "Authoritative but approachable",
+        "Educational, not preachy",
+        "Logical and structured",
+        "Dry, referential humor",
+        "Second-person direct address"
+      ],
+      "grammar": {
+        "use_active_voice": true,
+        "avoid_passive_voice": true,
+        "contractions_allowed": true,
+        "emoji_usage": "Use sparingly and with intent",
+        "avoid_buzzwords": true,
+        "avoid_age_descriptors": true
+      },
+      "prohibited_words": [
+        "funnel", "incentivize", "leverage", "disruption", "thought leader", "learnings",
+        "internets", "interwebs", "ninja", "rockstar", "wizard", "unicorn",
+        "young", "old", "crushing it", "killing it", "crazy", "insane",
+        "best-in-breed", "activation", "blacklist", "whitelist", "grandfathered", "slave", "master", "deaf", "blind"
+      ]
+    },
+    "voice_matrix": {
+      "voice_attributes": [
+        {
+          "attribute": "Knowledgeable & Referenced",
+          "do": "Drawing from recent data...",
+          "dont": "We believe this to be true..."
+        },
+        {
+          "attribute": "Structured & Logical",
+          "do": "Use clear hierarchies, explain in steps",
+          "dont": "Rambling or implicit logic"
+        },
+        {
+          "attribute": "Intellectual & Precise",
+          "do": "Use accurate terms with clear explanations",
+          "dont": "Overuse jargon or generalities"
+        },
+        {
+          "attribute": "Authoritative but Approachable",
+          "do": "Here’s how this framework helps",
+          "dont": "You should do this"
+        },
+        {
+          "attribute": "Transparent & Trustworthy",
+          "do": "Provide sources and data",
+          "dont": "Make unsubstantiated claims"
+        }
+      ]
+    },
+    "magic_write": {
+      "do": [
+        "Write like a seasoned strategist",
+        "Use punchy phrasing with a performance/tech edge",
+        "Lean into arcade/pop metaphors (sparingly)",
+        "Keep tone dry, smart, and witty",
+        "Prioritize clarity and specificity",
+        "Use second-person address"
+      ],
+      "dont": [
+        "Avoid excessive emojis or exclamations",
+        "Don't use buzzwords or SaaS clichés",
+        "Avoid bro-speak or trendy slang",
+        "Don’t be overly quirky or vague"
+      ]
+    }
+  },
+  "brandscape": {
+    "summary": "Star Wars production designer meets Linux developer and boutique hotelier.",
+    "keywords": ["strategic", "irreverent", "geeky", "savvy", "performance-obsessed"],
+    "analogies": {
+      "magazine": ["Fast Company", "Monocle", "Wired (2000s)", "EDGE"],
+      "movie": ["Ocean’s Eleven", "TRON: Legacy", "Rogue One"],
+      "music": ["Daft Punk", "LCD Soundsystem"],
+      "retail_brand": ["Geek", "Aesop", "Supreme"],
+      "card_archetype": ["The Hacker", "The Magician"],
+      "pastime": [
+        "Curating niche hotel guides with espresso and spreadsheets",
+        "Customizing Raspberry Pi for PMS",
+        "Debugging a CRS API on a Friday night"
+      ],
+      "drink": [
+        "Negroni in a highball",
+        "Smoked mezcal Negroni in CRT glass",
+        "Cold brew with tonic and citrus"
+      ]
+    }
+  },
+  "audience": {
+    "traits": [
+      "Independent-minded",
+      "Ambitious",
+      "Time-strapped but thoughtful",
+      "Style-aware and strategy-focused",
+      "Ready for change"
+    ],
+    "psychographic": "Operators, hoteliers, and technologists who seek innovation over tradition, and want smart systems, not fluff."
+  }
+}
