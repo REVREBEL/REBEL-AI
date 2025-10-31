@@ -1,0 +1,14 @@
+{
+  "id": "brand-voice-authority-approachability",
+  "text": "Our brand voice balances confident authority with human approachability. We communicate with precision, using direct and jargon-free language to make complex ideas simple. Messaging is structured, research-informed, and focused on education — all while maintaining warmth through conversational tone, empathy, and subtle humor. This duality positions us as a trusted expert who helps businesses grow without intimidation.",
+  "metadata": {
+    "module": "Brand Voice & Style",
+    "submodule": "Voice Principles",
+    "use_case": "Tone calibration",
+    "tone": "Confident, Approachable, Educational",
+    "audience": "Writers, Marketers, Designers, AI Systems",
+    "language": "English",
+    "channel": "All (Web, Email, Documentation, Ads, Product UI)",
+    "funnel_stage": "Awareness → Retention"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "vm-magicwrite-exclaim-dont",
+  "text": "Don't overuse exclamation points or emojis.",
+  "metadata": {
+    "module": "Brand Voice & Style",
+    "submodule": "Voice Matrix",
+    "attribute": "Excessive Enthusiasm",
+    "rule_type": "dont",
+    "severity": "must",
+    "example_bad": "\"Let's gooo! 🚀💥\"",
+    "channel": "Magic Write & Copy Guidance",
+    "language": "English"
+  }
+}

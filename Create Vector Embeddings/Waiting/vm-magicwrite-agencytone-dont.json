@@ -1,0 +1,14 @@
+{
+  "id": "vm-magicwrite-agencytone-dont",
+  "text": "Don't sound like a traditional agency or SaaS product.",
+  "metadata": {
+    "module": "Brand Voice & Style",
+    "submodule": "Voice Matrix",
+    "attribute": "Traditional Agency Tone",
+    "rule_type": "dont",
+    "severity": "must",
+    "example_bad": "\"Our team of experts will synergize your KPIs.\"",
+    "channel": "Magic Write & Copy Guidance",
+    "language": "English"
+  }
+}

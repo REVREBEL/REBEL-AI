@@ -1,0 +1,14 @@
+{
+  "id": "vm-magicwrite-quirky-dont",
+  "text": "Don't get too quirky or cryptic.",
+  "metadata": {
+    "module": "Brand Voice & Style",
+    "submodule": "Voice Matrix",
+    "attribute": "Overly Quirky or Cryptic Language",
+    "rule_type": "dont",
+    "severity": "should",
+    "example_bad": "\"Insert coin to continue… maybe?\"",
+    "channel": "Magic Write & Copy Guidance",
+    "language": "English"
+  }
+}
