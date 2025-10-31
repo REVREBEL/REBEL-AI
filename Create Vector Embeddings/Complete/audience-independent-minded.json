@@ -11,7 +11,7 @@
     "channel": "Brand Messaging, Campaign Strategy",
     "funnel_stage": "Awareness & Consideration"
   },
-  "_embedding": [
+  "vector": [
     0.0480164997279644,
     0.014753594063222408,
     -0.011068738996982574,
