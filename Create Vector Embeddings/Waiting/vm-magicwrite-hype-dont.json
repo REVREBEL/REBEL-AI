@@ -1,0 +1,14 @@
+{
+  "id": "vm-magicwrite-hype-dont",
+  "text": "Don't rely on hype or generic marketing speak.",
+  "metadata": {
+    "module": "Brand Voice & Style",
+    "submodule": "Voice Matrix",
+    "attribute": "Hype & Generic Speak",
+    "rule_type": "dont",
+    "severity": "must",
+    "example_bad": "\"Revolutionize your business with cutting-edge solutions!\"",
+    "channel": "Magic Write & Copy Guidance",
+    "language": "English"
+  }
+}

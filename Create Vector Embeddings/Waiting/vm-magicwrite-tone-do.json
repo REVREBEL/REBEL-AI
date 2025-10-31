@@ -1,0 +1,14 @@
+{
+  "id": "vm-magicwrite-tone-do",
+  "text": "Do: Keep the tone dry, witty, and grounded in intelligence.",
+  "metadata": {
+    "module": "Brand Voice & Style",
+    "submodule": "Voice Matrix",
+    "attribute": "Dry Witty Tone",
+    "rule_type": "do",
+    "severity": "must",
+    "example_good": "Think Aesop meets ThinkGeek.",
+    "channel": "Magic Write & Copy Guidance",
+    "language": "English"
+  }
+}

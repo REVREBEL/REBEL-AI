@@ -1,0 +1,18 @@
+{
+  "id": "typography-headlines-khand",
+  "text": "The primary headline typeface is Khand, used in uppercase for strong visual hierarchy. Use font weight 700 for H1-H4 and 600 for H5-H6. Fallback fonts include Oswald, Impact, and sans-serif.",
+  "metadata": {
+    "module": "Visual Identity System",
+    "submodule": "Typography",
+    "use_case": "Headline font styling",
+    "tone": "Clean, Modern, Professional",
+    "audience": "Designers, Developers, Brand Managers",
+    "language": "English",
+    "channel": "Web, Mobile, Print",
+    "funnel_stage": "N/A",
+    "font_family": "Khand",
+    "weights": { "h1-h4": 700, "h5-h6": 600 },
+    "transform": "uppercase",
+    "fallbacks": ["Oswald", "Impact", "sans-serif"]
+  }
+}

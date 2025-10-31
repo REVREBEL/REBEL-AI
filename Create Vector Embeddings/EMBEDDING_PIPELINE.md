@@ -11,8 +11,7 @@ A reusable Python script that processes JSON files by adding OpenAI embeddings.
 
 2. **Set your OpenAI API key:**
    ```bash
-   export OPENAI_API_KEY='your-api-key-here'
-   ```
+   export OPENAI_API_KEY={API_KEY****}   ```
 
 ## Usage
 

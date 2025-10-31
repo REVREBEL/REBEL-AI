@@ -1,0 +1,19 @@
+{
+  "id": "brand-emulators-pastime",
+  "text": "Curating niche hotel guides with 200 tabs open, customizing Raspberry Pis into PMS interfaces, and debugging CRS APIs for fun — the pastime of a creative technologist obsessed with systems and aesthetics.",
+  "metadata": {
+    "module": "Brand Core",
+    "submodule": "Brand Personality",
+    "attribute": "Creative Technologist Mindset",
+    "use_case": "Behavioral and cultural identity mapping",
+    "tone": "Curious, Obsessive, Technical",
+    "audience": [
+      "Internal Creative Teams",
+      "Strategists",
+      "Developers"
+    ],
+    "channel": "Strategy & Design",
+    "funnel_stage": "Foundational",
+    "language": "English"
+  }
+}

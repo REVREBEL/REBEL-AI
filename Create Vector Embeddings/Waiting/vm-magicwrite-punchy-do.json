@@ -1,0 +1,14 @@
+{
+  "id": "vm-magicwrite-punchy-do",
+  "text": "Do: Use punchy, clean phrasing rooted in performance and tech.",
+  "metadata": {
+    "module": "Brand Voice & Style",
+    "submodule": "Voice Matrix",
+    "attribute": "Punchy Performance Phrasing",
+    "rule_type": "do",
+    "severity": "should",
+    "example_good": "\"Forecast smarter. Price sharper. Sell better.\"",
+    "channel": "Magic Write & Copy Guidance",
+    "language": "English"
+  }
+}
