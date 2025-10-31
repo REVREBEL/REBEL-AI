@@ -1,0 +1,264 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "REVREBEL Persona Uploader (Zilliz Cloud)",
+    "version": "2.0.2"
+  },
+  "servers": [
+    {
+      "url": "https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "TOKEN"
+      }
+    },
+    "schemas": {}
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/entities/upsert": {
+      "post": {
+        "operationId": "upsert",
+        "summary": "Upsert persona records into a Zilliz collection",
+        "description": "Embed text first (outside this API), then upsert vectors plus scalar fields to Zilliz.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["collection_name", "data"],
+                "properties": {
+                  "collection_name": {
+                    "type": "string",
+                    "description": "Target Zilliz collection (e.g., persona_revrebel)"
+                  },
+                  "data": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "required": ["id", "vector"],
+                      "properties": {
+                        "id": { "type": "string" },
+                        "vector": {
+                          "type": "array",
+                          "items": { "type": "number" },
+                          "description": "Embedding vector (e.g., 1536 floats for text-embedding-3-small)"
+                        },
+                        "persona_id": { "type": "string" },
+                        "persona_version": { "type": "string" },
+                        "module": { "type": "string" },
+                        "submodule": { "type": "string" },
+                        "status": { "type": "string" },
+                        "tone": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "use_case": { "type": "string" },
+                        "audience": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "platform": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "channel": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "severity": { "type": "string" },
+                        "author": { "type": "string" },
+                        "language": { "type": "string" },
+                        "created_ym": { "type": "string" },
+                        "confidence_score": { "type": "number" },
+                        "weight": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "basic": {
+                  "value": {
+                    "collection_name": "persona_revrebel",
+                    "data": [
+                      {
+                        "id": "voice_rule_001",
+                        "vector": [0.12, -0.03, 0.07],
+                        "persona_id": "revrebel_core",
+                        "persona_version": "2.0",
+                        "module": "Brand Voice & Style",
+                        "submodule": "Tone Rules",
+                        "status": "active",
+                        "tone": ["confident", "approachable"],
+                        "use_case": "style_scaffold",
+                        "author": "REVREBEL",
+                        "language": "en",
+                        "created_ym": "2025-10",
+                        "confidence_score": 0.93,
+                        "weight": 0.8
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Upsert accepted" }
+        }
+      }
+    },
+    "/v1/vector/search": {
+      "post": {
+        "operationId": "search",
+        "summary": "Vector similarity search with optional scalar filters",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["collection_name", "vector"],
+                "properties": {
+                  "collection_name": {
+                    "type": "string",
+                    "description": "Collection to search (e.g., persona_revrebel)"
+                  },
+                  "vector": {
+                    "type": "array",
+                    "items": { "type": "number" }
+                  },
+                  "filter": {
+                    "type": "object",
+                    "description": "Scalar filters (e.g., {\"status\":\"active\",\"persona_id\":\"revrebel_core\"})",
+                    "additionalProperties": true
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 10
+                  },
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "metric_type": {
+                        "type": "string",
+                        "default": "COSINE"
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "persona_active": {
+                  "value": {
+                    "collection_name": "persona_revrebel",
+                    "vector": [0.11, -0.02, 0.05],
+                    "filter": { "status": "active", "persona_id": "revrebel_core" },
+                    "limit": 8,
+                    "params": { "metric_type": "COSINE" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Search results" }
+        }
+      }
+    },
+    "/v1/entities/delete": {
+      "post": {
+        "operationId": "delete",
+        "summary": "Delete entities by ID",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["collection_name", "ids"],
+                "properties": {
+                  "collection_name": { "type": "string" },
+                  "ids": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              },
+              "examples": {
+                "delete_one": {
+                  "value": {
+                    "collection_name": "persona_revrebel",
+                    "ids": ["voice_rule_001"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Deletion successful" }
+        }
+      }
+    },
+    "/v1/collections/{collection_name}/describe": {
+      "get": {
+        "operationId": "describeCollection",
+        "summary": "Describe collection schema (scalar fields, vector field, indexes)",
+        "parameters": [
+          {
+            "name": "collection_name",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Collection description (schema, fields, dims)" }
+        }
+      }
+    },
+    "/get-current-version": {
+      "post": {
+        "operationId": "getCurrentVersion",
+        "summary": "Fetch active persona version for REVREBEL (helper)",
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": {} }
+        },
+        "responses": {
+          "200": {
+            "description": "Latest active version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "persona_version": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "x-gpt-code": "Call /v1/vector/search with collection_name=persona_revrebel, embed a short query for 'active persona definition', filter {\"persona_id\":\"revrebel_core\",\"status\":\"active\"}, limit=1. Return persona_version from top hit."
+      }
+    }
+  }
+}

@@ -1,1193 +1,1353 @@
-# Database: Structural & Definitions Guide
-# `persona_revrebel`
+# REVREBEL Vector Database Reference
 
-This document serves as the foundational architecture and operational guide for building and maintaining a vector database that encapsulates a brand's entire identity—from strategic core to tactical application. The goal is to enable AI-powered asset generation that is always on-brand.
+Comprehensive reference for all Zilliz vector collections used in the REVREBEL ecosystem — covering retrieval, recommendations, persona embeddings, multi-modal asset discovery, and validation best practices.
+
+**Vector Database Platform:** Zilliz Cloud (Serverless)  
+**Endpoint:** `https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com`  
+**API Version:** v2
+
+
+
+
+
+<br>
+---
+<br>
+
+## Collection Overview
+
+| Collection               | Purpose                                       | Environment | Usage Type                                  |
+| ------------------------ | --------------------------------------------- | ----------- | ------------------------------------------- |
+| **dev_doc_search**       | Sandbox for document retrieval                | Dev         | RAG testing, embedding, metadata validation |
+| **prod_doc_search**      | Canonical production document retrieval       | Prod        | Live factual lookup                         |
+| **dev_recommendations**  | Sandbox for similarity and suggestion testing | Dev         | Creative exploration                        |
+| **prod_recommendations** | Production recommendation engine              | Prod        | Live content suggestion system              |
+| **dev_asset_embeddings** | Sandbox for visual/audio embedding testing    | Dev         | Multi-modal search, metadata validation     |
+| **prod_asset_embeddings** | Production semantic asset discovery          | Prod        | Visual similarity, cross-modal search       |
+| **persona_revrebel**     | REVREBEL brand personality & tone embeddings  | Core        | Stylistic memory for GPTs                   |
+
+**Note:** Zilliz collection names use underscores instead of hyphens.
+
+<br>
+---
+<br>
+
+## 1. `dev-doc-search`
 
 **Purpose:**
+Sandbox for document/text retrieval. Safe for experiments with chunking, metadata schemas, and embedding models.
 
-This index is dedicated to storing REVREBEL's brand personality traits, voice scaffolds, tone examples, and writing techniques. It enables modular injection of stylistic guidance into GPT responses — separate from factual knowledge or recommendation content.
+**Use Cases:**
 
-**Use Cases:** 
+* Validate new embedding pipelines
+* Test metadata filters (`domain`, `program`, `artifact_type`)
+* Debug query recall and ranking
 
-Style-aware GPT completions - Personality preloading in multi-step prompt chains - Experimental testing of tone or voice shifts (e.g., witty vs dry) - Modular swap-ins for future persona updates (persona_version: v2)
+**Notes:**
 
-<br>
----
-<br>
-
-## CLASSIFICATION OVERVIEW
-<br>
-
-Before defining modules, the system needs a universal way to determine how incoming content should be classified — whether it belongs as a Canonical Principle, a Matrix rule, or a standalone asset. This logic applies across all modules.
-
-<br>
-
-### High-Level Rules
-
-* **Canonical Principle** → Use when content describes strategy, philosophy, or conceptual tone (the *why* and *how* behind the brand's behavior).
-* **Matrix Entry** → Use when content contains actionable guidance, lists, rules, or contrasting examples (e.g., Do/Don't, If/Then logic).
-* **Dual Classification** → When both narrative guidance and rules coexist, create both a Canonical record (for context) and Matrix entries (for executional application).
-
-<br>
-
-### Application Across Modules
-
-| Example                           | Module                         | Classification                                                   |
-| --------------------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| Brand Emulators (Example 4)       | Brand Comparison & Inspiration | Canonical (conceptual) + optional Matrix for reference metaphors |
-| Writing Do's & Don'ts (Example 7) | Brand Voice & Style            | Matrix (rules) + Canonical overview of writing intent            |
-| Voice Principles (Example 6)      | Brand Voice & Style            | Canonical (tone philosophy) + optional Matrix (behavioral rules) |
-| Psychographics (Example 5)        | Audience Insight               | Canonical (motivational narrative)                               |
-| Brand Personality (Example 8)     | Brand Core                     | Canonical (descriptive personality narrative)                    |
-
-<br>
-
-## Appling the Logic
-
-When processing brand input related to voice, tone, or communication rules, the system first determines whether the content should be stored as a **Canonical Principle**, a **Voice Matrix**, or both.
-
-<br>
-
-**Initial Check Logic:**
-
-* If the input contains **strategic or philosophical explanations** about *how the brand communicates* (e.g., tone, intent, emotional character) → classify as **Canonical Principle**.
-* If the input contains **actionable instructions, do/don't phrasing, or behavior-based rules** → classify as **Voice Matrix**.
-* If both exist → store **both record types**: a narrative *principle* and modular *matrix* entries for enforcement.
-
-<br>
-
-## Decision Breakdown & Insert Examples
-
-### Scenario A: Input only contains Canonical Principle-style content
-
-**Example:** "Our brand voice balances confident authority with human approachability..."
-
-**Action:** Create one vector entry under **Brand Voice & Style → Voice Principles.**
-
-```json
-{
-  "id": "voice-authority-approachability",
-  "text": "Our brand voice balances confident authority with human approachability. We communicate with precision, using direct and jargon-free language to make complex ideas simple. Messaging is structured, research-informed, and focused on education — all while maintaining warmth through conversational tone, empathy, and subtle humor. This duality positions us as a trusted expert who helps businesses grow without intimidation.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Principles",
-    "use_case": "Tone calibration",
-    "tone": "Confident, Approachable, Educational",
-    "audience": "Writers, Marketers, Designers, AI Systems",
-    "language": "English",
-    "channel": "All",
-    "funnel_stage": "Awareness → Retention"
-  }
-}
-```
-
-<br>
-
-#### Scenario B: Input contains actionable rules or both narrative + behavior guidance
-
-**Example:** "Do: Draw from recent data. Don't: Use unverified statements."
-
-**Action:** Create multiple atomic entries under **Brand Voice & Style → Voice Matrix.** Each captures one attribute and its do/don't behavior.
-
-```json
-{
-  "id": "vm-transparent-trustworthy-do",
-  "text": "Transparent & Trustworthy — Do: Provide sources and data; avoid unsubstantiated claims.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Matrix",
-    "attribute": "Transparent & Trustworthy",
-    "rule_type": "do",
-    "severity": "must",
-    "example_good": "Source: STR Weekly Report, Sept 2025.",
-    "example_bad": "Everyone knows this works.",
-    "channel": "All",
-    "weight": 0.85,
-    "language": "English"
-  }
-}
-```
-
-```json
-{
-  "id": "vm-transparent-trustworthy-dont",
-  "text": "Transparent & Trustworthy — Don't: Make unsubstantiated or vague claims.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Matrix",
-    "attribute": "Transparent & Trustworthy",
-    "rule_type": "dont",
-    "severity": "must",
-    "example_good": "Provide citations for any performance metrics.",
-    "example_bad": "We guarantee immediate results!",
-    "channel": "All",
-    "weight": 0.85,
-    "language": "English"
-  }
-}
-```
-<br>
-
-### Why This Is Useful / Ideal
-
-This two-tiered method allows the vector database to store **context-rich strategy** and **atomic executional rules** side by side. It gives AI systems both **philosophical guidance** and **practical enforcement parameters**.
-
-#### Benefits:
-
-* **Precision + Context:** Narrative entries train AI to understand tone; matrix rules provide exact language constraints.
-* **Granular Retrieval:** Enables querying tone attributes, rule types, or severity to tailor brand content.
-* **AI Alignment:** Models can use Canonical Principles for context-building, and Voice Matrix rules for copy validation or generation.
-* **Scalable Governance:** Allows future automation (linting, QA, tone scoring) without losing the brand's creative nuance.
-* **Cross-Functional Utility:** Useful for brand teams, copywriters, and AI systems alike — linking strategy to real-world application.
-* **Consistency:** Shared decision logic ensures uniform data modeling across modules.
-* **Efficiency:** Prevents duplication and clarifies which format to use during vector insertion.
-* **Scalability:** Supports automated ingestion workflows by predefining rule triggers (e.g., detect 'Do/Don't' → Matrix).
-* **Retrieval Precision:** Enables filtered queries that combine context (Canonical) with application (Matrix) for better AI output.
-
-#### Later Use:
-
-* **During Prompting:** Fetch *Voice Principles* + *Tone by Channel* + *Voice Matrix* (must + should rules).
-* **During Validation:** Compare generated text against *don't* rules for quality assurance.
-* **During Training:** Use Canonical Principles as embedding context to maintain emotional fidelity.
+* Can be wiped anytime
+* Use to test index dimensions before production rollout
 
 <br>
 ---
 <br>
 
-## STRUCTURE OVERVIEW
+## 2. `prod-doc-search`
 
-The brand vector database is composed of **7 key modules**, each containing multiple semantic submodules. Each element within these modules is stored as a vectorized object with metadata for filtering and context-based retrieval.
+**Purpose:**
+Production-grade RAG (Retrieve-Augment-Generate) index. The backbone for contextual GPT lookups.
+
+**Use Cases:**
+
+* Fetch SOPs, briefs, or guides
+* Surface relevant policies in real-time workflows
+* Feed canonical docs into GPT completions
+
+**Data Examples:**
+Finalized documentation, approved playbooks, style guides.
+
+**Notes:**
+
+* Must include `source_url`, `doc_id`, `version`
+* Immutable except for version upgrades
+* All content must be validated and approved
+
+<br>
+---
+<br>
+
+## 3. `dev-recommendations`
+
+**Purpose:**
+Experimentation zone for similarity-based retrieval (creative matching).
+
+**Use Cases:**
+
+* Related content testing
+* Headline or concept similarity
+* Recommendation model validation
+
+**Notes:**
+
+* Freeform experimental data
+* Can test multimodal (image/text) embeddings
+
+<br>
+---
+<br>
+
+## 4. `prod-recommendations`
+
+**Purpose:**
+Live recommendation index powering production GPTs and automation logic.
+
+**Use Cases:**
+
+* Suggest related case studies, visuals, or CTAs
+* "You might also like" results for websites and dashboards
+* Cross-sell and upsell logic for hotels or campaigns
+
+**Notes:**
+
+* Only curated data allowed
+* Maintain structured metadata (`domain`, `artifact_type`, `tags`)
+* Version-lock embedding models between prod indexes
+
+<br>
+---
+<br>
+
+## 5. `dev-asset-embeddings`
+
+**Purpose:**
+Sandbox for testing multi-modal embeddings (visual, audio) before production deployment. Safe environment for validating embedding models, fusion strategies, and metadata schemas for brand assets.
+
+**Use Cases:**
+
+* Test visual embedding models (CLIP, ImageBind)
+* Validate audio embedding pipelines (CLAP, Whisper)
+* Experiment with embedding fusion strategies
+* Debug visual similarity queries
+* Test metadata extraction (color palettes, visual tags)
+
+**Notes:**
+
+* Can be wiped anytime
+* Test different embedding dimensions (512, 768, 1024)
+* Validate URL references to CDN assets
+* Prototype cross-modal search patterns
+
+<br>
+---
+<br>
+
+## 6. `prod-asset-embeddings`
+
+**Purpose:**
+Production-grade multi-modal index enabling semantic discovery of visual and audio brand assets through lightweight vector embeddings while maintaining actual assets on CDN.
+
+**Use Cases:**
+
+* "Find logos with retro-tech aesthetic" (text → visual search)
+* "Show photos similar to this reference image" (visual → visual search)
+* "Find all assets matching our arcade-era clarity vibe" (cross-modal search)
+* "Locate brand audio with upbeat energy" (text → audio search)
+* Style transfer queries ("photos matching logo aesthetic")
+
+**Data Examples:**
+Logos, brand photography, graphics, video keyframes, audio signatures.
+
+**Key Principle:**
+**Store URLs, not binaries.** Assets remain on CDN (Cloudinary, Google Drive, R2). Only lightweight embeddings (~2KB) and metadata are stored in the vector database.
+
+**Notes:**
+
+* All assets must include `url` pointing to CDN location
+* Embeddings generated from asset content (CLIP for images, CLAP for audio)
+* Hybrid embeddings combine visual + text descriptions
+* Requires `embedding_model` and `embedding_dimension` in metadata
+* Only approved, on-brand assets allowed
+
+<br>
+---
+<br>
+
+## 7. `persona:revrebel`
+
+
+
+**Purpose:** Personality & Voice Embeddings
+This index is dedicated to storing REVREBEL's brand personality traits including **brand voice** , **tone examples** and **stylistic rules** like writing techniques. Enables modular injection of stylistic guidance into GPT responses — separate from factual knowledge or recommendation content.
+
+**Use Cases:**
+
+* Style-aware completions
+* Personality preloading in multi-step prompt chains
+* Tone tuning (e.g., witty vs authoritative)
+* Experimental testing of tone or voice shifts (e.g., witty vs dry)
+* Persona evolution tracking (`persona_version`)
 
 <br>
 
-### CHANNEL-SPECIFIC TONE MANAGEMENT
+**Collection role:**
 
-To handle tone differences across channels such as social (more lively) versus blog (more instructional), create a submodule under **Brand Voice & Style** named *Tone by Channel*. Each channel entry should include:
-
-* Channel-specific tone descriptors (e.g., lively, conversational, instructional, authoritative).
-* Example phrasing and sentence structure guidance.
-* Associated metadata fields such as:
-
-  * `module`: Brand Voice & Style
-  * `submodule`: Tone by Channel
-  * `channel`: Social, Blog, Email, etc.
-  * `tone`: Descriptive tone words per channel (e.g., playful, professional)
-    This approach maintains brand consistency while allowing nuanced tone and phrasing adaptations per platform.
+- persona_revrebel holds canonical persona vectors and metadata.
+- No propagation
 
 <br>
 
-### EXPANDED: Tone-Channel Matrix
+Other collections (prod_doc_search, prod_asset_embeddings, prod_recommendations) query it at generation or retrieval time, this avoids duplication, ensures consistency, and allows semantic lookups.
 
-For granular control over platform-specific voice, expand the Tone by Channel submodule with detailed constraints:
 
-```json
-{
-  "id": "tone-linkedin-professional",
-  "text": "LinkedIn tone balances professional authority with approachability. Use data-driven insights, industry terminology, and thought leadership framing. Maintain conversational professionalism without corporate stiffness.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Tone by Channel",
-    "channel": "social",
-    "platform": "linkedin",
-    "tone": "professional-approachable",
-    "constraints": {
-      "max_length": 3000,
-      "emoji_allowed": false,
-      "hashtag_style": "minimal (1-3 strategic tags)",
-      "sentence_length": "medium (15-25 words)",
-      "formality": "business-casual"
+<br>
+---
+<br>
+
+
+
+## Production Insert & Query Examples
+
+The snippets below show how to **write to** and **read from** the production collections using the Zilliz REST API.
+
+**Authentication:** All requests require a Bearer token in the Authorization header.  
+**Base URL:** `https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com`
+
+<br>
+
+### A) `prod-doc-search` (Production RAG)
+
+**Zilliz REST API Insert:**
+
+```bash
+# INSERT a finalized doc chunk
+curl --request POST \
+  --url https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com/v2/vectordb/entities/insert \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer YOUR_ZILLIZ_API_TOKEN' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "collectionName": "prod_doc_search",
+    "data": [{
+      "primary_key": "doc-wf-auth-01",
+      "vector": [0.123, 0.456, ...],
+      "domain": "coding",
+      "program": "webflow",
+      "artifact_type": "howto",
+      "created_ym": "2025-10",
+      "source_url": "https://drive.google.com/...",
+      "doc_id": "wf-auth-01",
+      "version": "v3"
+    }]
+  }'
+```
+
+**Zilliz REST API Search:**
+
+```bash
+# SEARCH for similar docs
+curl --request POST \
+  --url https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com/v2/vectordb/entities/search \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer YOUR_ZILLIZ_API_TOKEN' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "collectionName": "prod_doc_search",
+    "data": [[0.123, 0.456, ...]],
+    "limit": 10,
+    "filter": "domain == \"coding\" && program == \"webflow\" && artifact_type == \"howto\"",
+    "outputFields": ["domain", "program", "artifact_type", "source_url", "doc_id"]
+  }'
+```
+
+**Node.js Example:**
+
+```ts
+// INSERT a doc chunk
+const ZILLIZ_ENDPOINT = 'https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com';
+const ZILLIZ_API_KEY = process.env.ZILLIZ_API_KEY;
+
+const insertResponse = await fetch(
+  `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/insert`,
+  {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+      'Content-Type': 'application/json'
     },
-    "example_phrases": [
-      "Here's what the data tells us:",
-      "Three insights worth considering:",
-      "Industry leaders are shifting toward..."
-    ],
-    "avoid_phrases": [
-      "Hey folks!",
-      "This is AMAZING!!! 🚀",
-      "You won't believe..."
-    ],
-    "persona_version": "v2.0",
-    "status": "active"
+    body: JSON.stringify({
+      collectionName: 'prod_doc_search',
+      data: [{
+        primary_key: crypto.randomUUID(),
+        vector: embedding384,
+        domain: 'coding',
+        program: 'webflow',
+        artifact_type: 'howto',
+        created_ym: '2025-10',
+        source_url: 'https://drive.google.com/...',
+        doc_id: 'wf-auth-01',
+        version: 'v3'
+      }]
+    })
   }
-}
-```
+);
 
-**Recommended Channels to Define:**
-- LinkedIn (professional)
-- Twitter/X (punchy, conversational)
-- Instagram (visual, aspirational)
-- Blog (instructional, comprehensive)
-- Email (direct, value-driven)
-- Product UI (helpful, concise)
-- Documentation (clear, technical)
-
-<br>
----
-<br>
-
-## MODULE 1: Brand Core
-**Definition**: Captures the strategic essence and foundational beliefs of the brand.
-
-| Submodule | Definition | Example Use Cases | Placement Rules |
-|----------|-------------|--------------------|-----------------|
-| Mission & Vision | The brand's purpose and long-term aspiration | AI generates 'About Us' page or founder pitch | Use when request includes "why we exist" or "what we aim to become" |
-| Brand Values | Ethical, cultural, or strategic principles | Tone/voice alignment, internal culture guides | Insert if prompt includes "principles" or "values-driven" keywords |
-| Brand Purpose | The brand's reason for being in the market | Campaign messaging, brand storytelling | Use for top-level narratives or strategic intros |
-| Brand Personality | Traits that describe brand as a human | AI content voice, tone simulation | Insert if user mentions "brand feels like..." or lists traits (e.g., bold, smart) |
-| Brand Archetype | Narrative framework that defines brand's role | Messaging tone, emotional hook writing | Include when archetype words (Hero, Sage, etc.) are used |
-
-<br>
-<br>
-
-## MODULE 2: Audience Insight
-**Definition**: Describes who the brand is talking to and how to emotionally resonate with them.
-
-| Submodule | Definition | Example Use Cases | Placement Rules |
-|----------|-------------|--------------------|-----------------|
-| Demographics | Age, gender, income, role, region | Persona building, paid ad targeting | Use for structured audience info inputs |
-| Psychographics | Values, beliefs, motivators, attitudes | Emotional messaging, CTA tuning | Insert when prompt includes psychological or emotional descriptors |
-| Buyer Personas | Semi-fictional audience segments | Content strategy, product positioning | Place if prompt includes defined personas by name, title, or scenario |
-| Audience Tone Preferences | How the audience prefers to be spoken to | Copywriting style, UX writing | Insert if style matching to audience is required (e.g., technical vs casual) |
-
-<br>
-<br>
-
-## MODULE 3: Brand Messaging System
-**Definition**: The structured language and communication strategy of the brand.
-
-| Submodule | Definition | Example Use Cases | Placement Rules |
-|----------|-------------|--------------------|-----------------|
-| Value Propositions | Benefits that differentiate brand/products | Website headlines, sales decks | Insert if user asks "Why choose us?" or similar |
-| Brand Pillars | Strategic themes supporting brand position | Thought leadership, campaign planning | Use if prompt includes "main messages" or "key ideas" |
-| Taglines & Slogans | Short-form phrases encapsulating the brand | Logo lockups, ads, product launches | Place if short, punchy lines are mentioned |
-| Messaging by Funnel Stage | Messaging tailored to buyer's journey | Lifecycle email copy, PPC ads | Insert when content is tied to funnel stages |
-| Signature Phrases & Keywords | Repeated brand-specific language | SEO, branded copy templates | Include if prompt asks for unique brand language or phrases |
-
-<br>
-<br>
-
-## MODULE 4: Brand Voice & Style
-**Definition**: Rules and personality of the brand's written expression.
-
-| Submodule | Definition | Example Use Cases | Placement Rules |
-|----------|-------------|--------------------|-----------------|
-| Voice Principles | Foundational voice characteristics | Brand guideline creation, tone review | Insert when defining brand's personality in language |
-| Grammar Rules | Punctuation, spelling, formatting preferences | UX writing, legal reviews | Include if prompt involves linguistic correctness |
-| Sentence Structures | Rhythm, length, and tone style | Blog articles, product pages | Use when prompt asks for tone clarity or pacing |
-| Tone Variations | Voice shifting across contexts/channels | Multichannel campaign content | Insert if multiple brand contexts are involved |
-| Writing Do's and Don'ts | Prescriptive copy rules | Onboarding content, agency handoffs | Include when prompt refers to guidelines or rules |
-| Tone by Channel |  Social, Blog, Email, etc. | Descriptive tone words per channel (e.g., playful, professional) | Include when prompt refers to guidelines or rules |
-
-<br>
-<br>
-
-### EXPANDED: Voice Matrix Severity Levels
-
-The Voice Matrix uses severity levels to indicate the importance of compliance with each rule. This creates a spectrum from absolute requirements to stylistic preferences.
-
-**Severity Taxonomy:**
-
-| Severity | Definition | Usage | Violation Impact |
-|----------|------------|-------|------------------|
-| **must** | Non-negotiable requirements | Legal compliance, brand safety, factual accuracy | Hard failure, blocks publication |
-| **should** | Strong recommendations | Core voice attributes, key differentiators | Warning flag, requires review |
-| **prefer** | Stylistic preferences | Sentence structure, word choice nuances | Suggestion only, no blocking |
-| **avoid** | Discouraged but not prohibited | Overused phrases, weak language | Guidance, coach alternative |
-| **never** | Absolute prohibitions | Off-brand language, competitor mentions | Hard failure, blocks publication |
-
-**Implementation Example:**
-
-```json
-{
-  "id": "vm-data-accuracy-must",
-  "text": "Data Accuracy — Must: Verify all statistics and cite sources before publication.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Matrix",
-    "attribute": "Data Accuracy",
-    "rule_type": "do",
-    "severity": "must",
-    "violation_action": "block_publication",
-    "example_good": "According to STR's Q3 2025 report, ADR increased 3.2%.",
-    "example_bad": "ADR went up significantly.",
-    "weight": 1.0,
-    "channel": "All"
+// SEARCH for similar docs
+const searchResponse = await fetch(
+  `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/search`,
+  {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      collectionName: 'prod_doc_search',
+      data: [embedding384],
+      limit: 10,
+      filter: 'domain == "coding" && program == "webflow" && artifact_type == "howto"',
+      outputFields: ['domain', 'program', 'artifact_type', 'source_url', 'doc_id']
+    })
   }
-}
+);
+
+const results = await searchResponse.json();
 ```
 
-```json
-{
-  "id": "vm-sentence-brevity-prefer",
-  "text": "Sentence Brevity — Prefer: Keep sentences under 25 words when possible.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Matrix",
-    "attribute": "Sentence Brevity",
-    "rule_type": "do",
-    "severity": "prefer",
-    "violation_action": "suggest_edit",
-    "example_good": "Our platform optimizes pricing in real-time.",
-    "example_bad": "Our sophisticated algorithmic platform leverages machine learning to dynamically optimize pricing strategies in real-time based on market conditions.",
-    "weight": 0.4,
-    "channel": "All"
+<br>
+
+### B) `prod-recommendations` (Production rec engine)
+
+**Zilliz REST API Insert:**
+
+```bash
+# INSERT an approved recommendation candidate
+curl --request POST \
+  --url https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com/v2/vectordb/entities/insert \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer YOUR_ZILLIZ_API_TOKEN' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "collectionName": "prod_recommendations",
+    "data": [{
+      "primary_key": "rec-hlx-042",
+      "vector": [0.123, 0.456, ...],
+      "domain": "design",
+      "artifact_type": "headline",
+      "created_ym": "2025-10",
+      "tags": ["luxury", "retro-tech"],
+      "source_url": "https://drive.google.com/...",
+      "doc_id": "hlx-042",
+      "version": "v1"
+    }]
+  }'
+```
+
+**Zilliz REST API Search:**
+
+```bash
+# SEARCH for similar recommendations
+curl --request POST \
+  --url https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com/v2/vectordb/entities/search \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer YOUR_ZILLIZ_API_TOKEN' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "collectionName": "prod_recommendations",
+    "data": [[0.123, 0.456, ...]],
+    "limit": 5,
+    "filter": "domain == \"design\" && artifact_type == \"headline\"",
+    "outputFields": ["domain", "artifact_type", "tags", "source_url", "doc_id"]
+  }'
+```
+
+**Node.js Example:**
+
+```ts
+// INSERT a recommendation candidate
+const insertResponse = await fetch(
+  `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/insert`,
+  {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      collectionName: 'prod_recommendations',
+      data: [{
+        primary_key: crypto.randomUUID(),
+        vector: embedding384,
+        domain: 'design',
+        artifact_type: 'headline',
+        created_ym: '2025-10',
+        tags: ['luxury', 'retro-tech'],
+        source_url: 'https://drive.google.com/...',
+        doc_id: 'hlx-042',
+        version: 'v1'
+      }]
+    })
   }
-}
-```
+);
 
-**Severity-Based Querying:**
-
-```typescript
-// Fetch only critical rules for validation
-const criticalRules = await env.PERSONA.query(contextEmbedding, {
-  filter: { 
-    submodule: "Voice Matrix",
-    severity: ["must", "never"]
+// SEARCH for similar recommendations
+const searchResponse = await fetch(
+  `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/search`,
+  {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      collectionName: 'prod_recommendations',
+      data: [embedding384],
+      limit: 5,
+      filter: 'domain == "design" && artifact_type == "headline"',
+      outputFields: ['domain', 'artifact_type', 'tags', 'source_url', 'doc_id']
+    })
   }
-});
+);
 
-// Fetch all guidance for training
-const allGuidance = await env.PERSONA.query(contextEmbedding, {
-  filter: { submodule: "Voice Matrix" }
-});
+const results = await searchResponse.json();
 ```
 
 <br>
 
-## MODULE 5: Visual Identity System
-**Definition**: Visual rules and elements that express the brand.
+### C) `persona_revrebel` (Personality & Voice Embeddings RAG)
 
-| Submodule | Definition | Example Use Cases | Placement Rules |
-|----------|-------------|--------------------|-----------------|
-| Logos | Approved logo variations | Print, digital, packaging | Use if logo files or spacing rules are referenced |
-| Brand Colors | Brand color palette with codes | UI/UX design, print assets | Place if colors or palette mentioned explicitly |
-| Typography | Fonts used and their usage rules | Style guides, website design | Insert if fonts or typesetting guidelines are discussed |
-| Image Style | Direction for photos, graphics, illustrations | AI-generated visuals, moodboards | Use when discussing image direction or aesthetic |
-| Design Do's & Don'ts | Visual rules of what to avoid or use | Brand audits, new campaign QA | Include for consistency checks or visual guardrails |
-| Moodboards | Visual style boards for inspiration | Art direction, concept development | Insert if user needs visual inspiration aligned with brand |
+**Zilliz REST API Insert:**
 
-<br>
-<br>
-
-## MODULE 6: Brand Comparison & Inspiration
-**Definition**: Metaphorical and competitive framing for stylistic alignment.
-
-| Submodule | Definition | Example Use Cases | Placement Rules |
-|----------|-------------|--------------------|-----------------|
-| Brand Emulators | "If the brand were…" comparisons | Creative exploration, persona shaping | Use if user makes brand analogies (e.g., "We're the Tesla of...") |
-| Analogies & Metaphors | Figurative descriptions of brand essence | Narrative crafting, pitch decks | Insert if prompt contains metaphorical framing |
-| Tone Benchmarks | Brands we admire or align with | Competitive brand tone analysis | Use if brand tone is compared to others |
-| Differentiators | How the brand stands out vs competitors | Messaging, pitch decks | Include if prompt asks for what makes us different |
-
-<br>
-<br>
-
-
-## MODULE 7: Tactical Brand Usage
-**Definition**: Application-specific expressions of the brand.
-
-| Submodule | Definition | Example Use Cases | Placement Rules |
-|----------|-------------|--------------------|-----------------|
-| Use Cases | Where/why brand elements are applied | Channel strategy, training manuals | Insert if user provides a goal or format (e.g., email, tweet) |
-| Touchpoint Guidance | Brand behavior across platforms | Omnichannel planning, social media kits | Use for cross-channel campaign prompts |
-| Common Mistakes | Examples of off-brand behavior | Internal QA, brand training | Insert if user asks "what to avoid" or shows inconsistency |
-| Template Outputs | Pre-approved example content | Training GPTs, new hire onboarding | Use when referencing real past campaigns or templates |
-
-<br>
----
-<br>
-
-## DECISION TREE OVERVIEW (SIMPLIFIED)
-
-```
-[User Prompt Received]
-        |
-        +-- Does it describe WHO we are? ---------+--> Brand Core
-        |
-        +-- Does it describe WHO we serve? -------+--> Audience Insight
-        |
-        +-- Is it about WHAT we say or HOW? ------+--> Brand Messaging System
-        |
-        +-- Does it describe HOW we speak? -------+--> Brand Voice & Style
-        |
-        +-- Is it about what we LOOK like? -------+--> Visual Identity System
-        |
-        +-- Does it compare/position us? ---------+--> Brand Comparison & Inspiration
-        |
-        +-- Is it application-specific? ----------+--> Tactical Brand Usage
+```bash
+curl --request POST \
+  --url https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com/v2/vectordb/entities/insert \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer YOUR_ZILLIZ_API_TOKEN' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "collectionName": "persona_revrebel",
+    "data": [{
+      "primary_key": "persona-voice-core-01",
+      "vector": [0.123, 0.456, ...],
+      "persona_id": "revrebel_core",
+      "persona_version": "v1",
+      "module": "Brand Voice & Style",
+      "submodule": "Voice Principles",
+      "status": "active",
+      "tone": ["witty", "rebellious", "punchy"],
+      "use_case": "style_scaffold",
+      "created_ym": "2025-10",
+      "author": "Gizmo",
+      "language": "en"
+    }]
+  }'
 ```
 
 <br>
 ---
 <br>
 
-## Status Field Definition
+### Best Practices
 
-Include a `status` field in all metadata objects.
-
-```json
-"status": "active" | "deprecated" | "draft"
-```
-
-| Status         | Definition                                                | Typical Use                                   |
-| -------------- | --------------------------------------------------------- | --------------------------------------------- |
-| **active**     | In current use; approved for all production applications. | Live brand references, canonical entries.     |
-| **deprecated** | Retained for historical context but no longer in use.     | Outdated tone, visuals, or strategy examples. |
-| **draft**      | Under review or pending approval.                         | New entries not yet validated.                |
+* Store **voice scaffolds**, **stylistic examples**, and **writing rules** here
+* Keep separate from factual indexes (`prod-doc-search`)
+* Version persona updates with `persona_version` (e.g., `v2`, `v2.1-beta`)
+* Use prefix-based retrieval (e.g., `persona:revrebel`) for tone-consistent completions
 
 <br>
+---
+<br>
 
-### Active Record
+## Multi-Modal Asset Embeddings: Deep Dive
+
+### Architecture Philosophy
+
+**Core Principle:** Separate asset storage from semantic search.
+
+```
+┌─────────────────────────────────────────────┐
+│          CDN Storage Layer                  │
+│  (Cloudinary, Google Drive, R2)             │
+│  • Actual image/video/audio files           │
+│  • Optimized delivery                       │
+│  • 2MB - 50MB per asset                     │
+└─────────────────────────────────────────────┘
+                    ↑
+                    │ URL Reference
+                    │
+┌─────────────────────────────────────────────┐
+│     Vector Database (Vectorize)             │
+│  • Lightweight embeddings (~2KB)            │
+│  • Metadata + URL references                │
+│  • Semantic search capability               │
+└─────────────────────────────────────────────┘
+```
+
+### Asset Embedding Schema
 
 ```json
 {
-  "id": "voice-authority-approachability-v2",
-  "text": "Our brand voice balances confident authority with human approachability...",
+  "id": "asset-{uuid}",
+  "values": [...],  // 512 or 768-dim embedding
+  "text": "Primary REVREBEL logo - horizontal lockup with retro-tech aesthetic",
   "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Principles",
+    // Asset Identity
+    "asset_type": "logo",
+    "variant": "primary",
+    "asset_id": "logo-primary-001",
+    
+    // Storage Location (CRITICAL)
+    "url": "https://res.cloudinary.com/revrebel/image/upload/v1761516148/RR/Logos/revrebel-logo.png",
+    "cdn_provider": "cloudinary",
+    "backup_url": "https://backup.cdn.example.com/...",
+    
+    // File Properties
+    "format": "png",
+    "dimensions": "2400x800",
+    "file_size_kb": 145,
+    "color_depth": "24bit",
+    
+    // Brand Context
+    "domain": "visual-identity",
+    "submodule": "logos",
+    "use_case": "website-print-social",
+    "channel": "web",
+    
+    // Visual Characteristics
+    "visual_tags": ["geometric", "bold", "minimal", "retro-tech"],
+    "color_palette": ["#163666", "#047C97", "#71C9C5"],
+    "mood": "professional-rebellious",
+    "style_era": "arcade",
+    
+    // Embedding Metadata
+    "embedding_model": "clip-vit-b-32",
+    "embedding_dimension": 512,
+    "text_embedding_model": "text-embedding-3-small",
+    "fusion_method": "weighted_average",
+    "visual_weight": 0.7,
+    "text_weight": 0.3,
+    
+    // Standard Fields
+    "created_ym": "2025-10",
+    "version": "v2.1",
+    "author": "design-team",
+    "approval_status": "approved",
     "status": "active",
-    "version": "2.0",
-    "language": "en"
-  }
-}
-```
-<br>
-
-### Deprecated Record
-
-```json
-{
-  "id": "voice-authority-approachability-v1",
-  "text": "Legacy tone definition prior to 2025-Q3 update.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Principles",
-    "status": "deprecated",
-    "version": "1.0",
-    "deprecated_reason": "Superseded by 2025 tone calibration update",
-    "language": "en"
+    "last_updated": "2025-10-28"
   }
 }
 ```
 
-<br>
----
-<br>
+### Decision Tree: Should This Asset Be Embedded?
 
-## Versioning Guidance
-
-REVREBEL uses `persona_version` to track voice iterations. We recommend using a simplified format like `v1.0`, `v2.0`, etc., unless a third digit is needed for hotfixes or microadjustments (e.g., `v1.0.1`).
-
-| Version Type | When to Use                                           | Example                       |
-| ------------ | ----------------------------------------------------- | ----------------------------- |
-| `v1.0`       | Initial stable release of persona style               | Foundational voice definition |
-| `v2.0`       | Major shift in tone, rewritten guidance, or a rebrand | Voice overhaul or pivot       |
-| `v2.1`       | Minor tweaks or modular expansion                     | Added new scaffold type       |
-| `v1.0.1`     | Patch or correction to existing version               | Typo fix or metadata update   |
-
-<br>
-
-**Rules for Updating:**
-
-* Only one `persona_version` should be marked `active` at a time.
-* When a new version is made active, previous version should be set to `deprecated`.
-* A `version bump` should be logged when voice direction, formatting style, or rules meaningfully shift.
-* Use consistent author metadata to track who made the update.
-
-> ⚠️ All GPT insertions and queries should check for the latest `status=active` version unless instructed otherwise.
-
-<br>
----
-<br>
-
-## ADVANCED FEATURES
-
-### 1. Cross-Database Relationships
-
-While the persona database (`persona:revrebel`) remains separate from knowledge/asset databases, establishing cross-references enables richer context and example-driven guidance.
-
-**Implementation:**
-
-```json
-{
-  "id": "voice-witty-irreverent",
-  "text": "Witty, irreverent tone with pop culture references and dry humor. Think Aesop meets ThinkGeek.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Principles",
-    "related_examples": [
-      "doc:campaign-retro-arcade-launch",
-      "doc:blog-post-revenue-hacks-2025",
-      "asset:photo-retro-tech-moodboard"
-    ],
-    "use_case_refs": [
-      "prod-doc-search:social-media-guide",
-      "prod-asset-embeddings:logo-primary-001"
-    ],
-    "persona_version": "v2.0",
-    "status": "active"
-  }
-}
+```
+[Asset Upload/Registration]
+        |
+        +-- Is it a binary asset? (image/video/audio)
+        |       |
+        |       YES --> Continue to embedding decision
+        |       NO  --> Route to text indexes (prod-doc-search)
+        |
+        +-- Will users search for it semantically?
+        |       |
+        |       YES --> "Find logos with retro vibe"
+        |       |       "Photos similar to this mood"
+        |       |       --> CREATE EMBEDDING
+        |       |
+        |       NO  --> "Get the primary logo" (exact match)
+        |               "Download brand colors"
+        |               --> METADATA ONLY (no embedding)
+        |
+        +-- Asset Type Routing:
+                |
+                +-- Logo/Graphic --> ✅ CLIP embedding
+                +-- Photo/Image --> ✅ CLIP embedding
+                +-- Video --> ✅ CLIP (keyframes) or VideoMAE
+                +-- Audio --> ✅ CLAP or Whisper embedding
+                +-- Font File --> ⚠️  Text description embedding only
+                +-- Color Palette --> ❌ Exact match, no embedding
+                +-- PDF/Doc --> Route to prod-doc-search
 ```
 
-**Query Pattern:**
+### Asset Type Decision Matrix
+
+| Asset Type | Store URL? | Store Embedding? | Searchable By | Primary Use Case |
+|------------|------------|------------------|---------------|------------------|
+| **Logo** | ✅ Always | ✅ Yes (CLIP) | Text, Visual | "Find retro logos" |
+| **Photo** | ✅ Always | ✅ Yes (CLIP) | Text, Visual | "Similar mood photos" |
+| **Brand Colors** | ✅ Always | ❌ No | Exact match | "Get primary color" |
+| **Font Files** | ✅ Always | ⚠️ Text only | Text description | "Find bold fonts" |
+| **Video** | ✅ Always | ✅ Yes (CLIP keyframes) | Text, Visual | "Videos with energy" |
+| **Audio** | ✅ Always | ✅ Yes (CLAP) | Text, Audio | "Upbeat brand audio" |
+| **Documents** | ✅ Always | ✅ Yes (Text) | Text content | Use prod-doc-search |
+| **Graphics** | ✅ Always | ✅ Yes (CLIP) | Text, Visual | "Icon style match" |
+
+### Embedding Models by Asset Type
+
+**Visual Assets:**
+
+| Asset Type | Recommended Model | Dimension | Use Case |
+|------------|-------------------|-----------|----------|
+| **Logo** | CLIP ViT-B/32 | 512 | Style matching, semantic search |
+| **Photo** | CLIP ViT-L/14 | 768 | High-quality visual similarity |
+| **Graphic** | CLIP ViT-B/32 | 512 | Design element search |
+| **Video** | CLIP (keyframes) | 512 | Scene/mood matching |
+
+**Audio Assets:**
+
+| Asset Type | Recommended Model | Dimension | Use Case |
+|------------|-------------------|-----------|----------|
+| **Brand Audio** | CLAP | 512 | Sonic branding similarity |
+| **Voice** | Whisper (encoder) | 768 | Voice tone matching |
+
+**Hybrid (Text + Visual):**
+
+| Combination | Fusion Method | Visual Weight | Text Weight |
+|-------------|---------------|---------------|-------------|
+| **Logo + Description** | Weighted Average | 70% | 30% |
+| **Photo + Caption** | Weighted Average | 80% | 20% |
+| **Video + Transcript** | Concatenation | 60% | 40% |
+
+### Storage Impact Analysis
+
+```
+Per Asset Storage:
+- Embedding vector (512 dims): ~2KB
+- Metadata JSON: ~1KB
+- Total per asset: ~3KB
+
+Scale Comparison:
+1,000 assets:
+  - Actual images: 1,000 × 2MB = 2GB
+  - Embeddings only: 1,000 × 3KB = 3MB (667x smaller)
+
+10,000 assets:
+  - Actual images: 10,000 × 2MB = 20GB  
+  - Embeddings only: 10,000 × 3KB = 30MB (667x smaller)
+```
+
+### Query Performance Benchmarks
+
+Expected latency for Cloudflare Vectorize:
+
+- **Text → Asset search:** 50-100ms
+- **Asset → Asset search:** 30-80ms  
+- **Hybrid search:** 100-150ms
+- **Cross-modal batch:** 150-250ms
+
+### Asset Ingestion Workflow
 
 ```typescript
-// Fetch voice principle
-const voicePrinciple = await env.PERSONA.query(embedding, {
-  filter: { submodule: "Voice Principles" },
-  topK: 1
-});
+// Asset ingestion pipeline for Zilliz
+interface AssetUpload {
+  file: File | URL;
+  type: 'logo' | 'photo' | 'graphic' | 'video' | 'audio';
+  description: string;
+  metadata: Record<string, any>;
+}
 
-// Fetch related examples from other databases
-const relatedDocs = await env.PROD_DOCS.getByIds(
-  voicePrinciple.metadata.related_examples
-    .filter(ref => ref.startsWith('doc:'))
-    .map(ref => ref.replace('doc:', ''))
-);
+const ZILLIZ_ENDPOINT = 'https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com';
+const ZILLIZ_API_KEY = process.env.ZILLIZ_API_KEY;
 
-const relatedAssets = await env.PROD_ASSETS.getByIds(
-  voicePrinciple.metadata.related_examples
-    .filter(ref => ref.startsWith('asset:'))
-    .map(ref => ref.replace('asset:', ''))
-);
-```
-
-**Benefits:**
-- "Show me examples of this tone in practice"
-- "What docs align with this voice principle?"
-- Links abstract guidance to concrete implementations
-
-<br>
-
-### 2. Temporal Context Awareness
-
-Track when persona elements were valid and when they evolved. This enables historical queries and gradual transitions.
-
-**Schema Addition:**
-
-```json
-{
-  "id": "voice-authority-approachability-v2",
-  "text": "Our brand voice balances confident authority with human approachability...",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Principles",
-    "persona_version": "v2.0",
-    "valid_from": "2025-01-01T00:00:00Z",
-    "valid_until": null,
-    "supersedes": ["voice-authority-approachability-v1"],
-    "superseded_by": null,
-    "change_log": "Shifted from quirky humor to dry wit; reduced exclamation point usage",
-    "change_author": "brand-team",
-    "change_reason": "Brand maturity; targeting enterprise clients",
-    "status": "active"
+async function ingestAsset(
+  upload: AssetUpload
+): Promise<string> {
+  
+  // STEP 1: Upload to CDN
+  const cdnUrl = await uploadToCDN(upload.file, {
+    folder: `RR/${upload.type}s`,
+    transformation: upload.type === 'logo' 
+      ? { format: 'auto', quality: 'auto' }
+      : undefined
+  });
+  
+  // STEP 2: Generate visual embedding
+  let visualEmbedding: number[] | null = null;
+  
+  if (['logo', 'photo', 'graphic', 'video'].includes(upload.type)) {
+    visualEmbedding = await generateVisualEmbedding(upload.file, {
+      model: 'clip-vit-b-32',
+      dimension: 512
+    });
+  } else if (upload.type === 'audio') {
+    visualEmbedding = await generateAudioEmbedding(upload.file, {
+      model: 'clap-large',
+      dimension: 512
+    });
   }
+  
+  // STEP 3: Generate text embedding from description
+  const textEmbedding = await generateTextEmbedding(upload.description, {
+    model: 'text-embedding-3-small',
+    dimension: 512
+  });
+  
+  // STEP 4: Fuse embeddings (if visual exists)
+  const finalEmbedding = visualEmbedding 
+    ? fuseEmbeddings(visualEmbedding, textEmbedding, {
+        visualWeight: 0.7,
+        textWeight: 0.3,
+        method: 'weighted_average'
+      })
+    : textEmbedding;
+  
+  // STEP 5: Extract visual characteristics
+  const visualTags = await extractVisualTags(upload.file);
+  const colorPalette = await extractDominantColors(upload.file, { count: 5 });
+  
+  // STEP 6: Insert into Zilliz vector database
+  const assetId = `asset-${crypto.randomUUID()}`;
+  
+  const response = await fetch(
+    `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/insert`,
+    {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        collectionName: 'prod_asset_embeddings',
+        data: [{
+          primary_key: assetId,
+          vector: finalEmbedding,
+          asset_type: upload.type,
+          url: cdnUrl,
+          cdn_provider: 'cloudinary',
+          format: upload.type === 'logo' ? 'png' : 'jpg',
+          visual_tags: visualTags,
+          color_palette: colorPalette,
+          created_ym: new Date().toISOString().slice(0, 7),
+          status: 'active',
+          ...upload.metadata
+        }]
+      })
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to insert asset: ${await response.text()}`);
+  }
+  
+  return assetId;
 }
 ```
 
-**Use Cases:**
+### Query Pattern Examples
 
-1. **Historical Analysis:**
-   ```typescript
-   // "How would v1.0 voice have written this?"
-   const historicalVoice = await env.PERSONA.query(embedding, {
-     filter: { 
-       persona_version: "v1.0",
-       valid_from: { $lte: "2024-12-31" }
-     }
-   });
-   ```
-
-2. **Transition Periods:**
-   ```typescript
-   // During brand evolution, blend old and new
-   const currentVoice = await env.PERSONA.query(embedding, {
-     filter: { status: "active", persona_version: "v2.0" }
-   });
-   
-   const legacyVoice = await env.PERSONA.query(embedding, {
-     filter: { status: "deprecated", persona_version: "v1.0" }
-   });
-   
-   // Blend for gradual transition (70% new, 30% old)
-   const transitionGuidance = blendVoices(currentVoice, legacyVoice, 0.7);
-   ```
-
-3. **Audit Trails:**
-   - "When did we stop using exclamation points?"
-   - "What changed between v1.5 and v2.0?"
-
-<br>
-
-### 3. Confidence Scoring
-
-Add confidence metadata to indicate certainty about persona guidance. Useful for flagging experimental or contested elements.
-
-**Schema Addition:**
-
-```json
-{
-  "id": "vm-emoji-usage-experimental",
-  "text": "Emoji Usage — Avoid: Minimize emoji use in professional contexts; test sparingly in social.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Matrix",
-    "attribute": "Emoji Usage",
-    "rule_type": "avoid",
-    "severity": "prefer",
-    "confidence_score": 0.65,
-    "confidence_reason": "Limited testing; mixed feedback from audience",
-    "verified_by": "design-team",
-    "last_verified": "2025-10-15",
-    "verification_method": "A/B test (n=500)",
-    "dispute_count": 2,
-    "status": "active"
-  }
-}
-```
-
-**Confidence Levels:**
-
-| Score Range | Interpretation | Usage |
-|-------------|----------------|-------|
-| **0.95-1.0** | Highly confident | Core brand attributes, validated principles |
-| **0.80-0.94** | Confident | Established guidelines with evidence |
-| **0.65-0.79** | Moderate confidence | Recent additions, limited validation |
-| **0.50-0.64** | Low confidence | Experimental, contested, or outdated |
-| **< 0.50** | Uncertain | Flag for review or deprecation |
-
-**Query Pattern:**
-
+**1. Text → Asset Search**
 ```typescript
-// Fetch only high-confidence rules for critical content
-const reliableGuidance = await env.PERSONA.query(embedding, {
-  filter: { 
-    submodule: "Voice Matrix",
-    confidence_score: { $gte: 0.80 }
-  }
-});
-
-// Flag low-confidence areas for human review
-const uncertainGuidance = await env.PERSONA.query(embedding, {
-  filter: { 
-    confidence_score: { $lt: 0.65 }
-  }
-});
-```
-
-**Benefits:**
-- Flags potentially outdated or contested information
-- Enables gradual confidence building through validation
-- Prioritizes high-confidence guidance for production use
-
-<br>
-
-### 4. Contextual Personas (Sub-Personas)
-
-While the main persona (`revrebel_core`) defines overall brand voice, contextual personas handle specific use cases that require different tones.
-
-**Use Cases:**
-
-| Context | Persona ID | Tone Shift | When to Use |
-|---------|------------|------------|-------------|
-| **Founder Voice** | `revrebel_founder` | Visionary, bold, aspirational | Keynotes, manifestos, origin stories |
-| **Customer Support** | `revrebel_support` | Helpful, patient, empathetic | Help docs, support tickets, onboarding |
-| **Technical Docs** | `revrebel_technical` | Precise, clear, instructional | API docs, integration guides, tutorials |
-| **Sales** | `revrebel_sales` | Confident, value-focused, consultative | Pitch decks, proposals, discovery calls |
-| **Social Media** | `revrebel_social` | Casual, witty, conversational | Twitter, LinkedIn, Instagram |
-
-**Implementation:**
-
-```json
-{
-  "id": "persona-founder-visionary",
-  "text": "Founder voice is bold and visionary. Use first-person perspective, share origin stories, and paint aspirational futures. Reference the 'why' behind decisions. Think Steve Jobs keynotes meets manifesto energy.",
-  "metadata": {
-    "persona_id": "revrebel_founder",
-    "persona_version": "v2.0",
-    "tone": "visionary, bold, inspirational",
-    "use_case": "keynotes, founder statements, origin stories",
-    "first_person": true,
-    "example_phrases": [
-      "When we started REVREBEL, we saw a broken system...",
-      "The future of revenue management isn't about...",
-      "We believe every hotel deserves..."
-    ],
-    "avoid_phrases": [
-      "Our product offers...",
-      "According to our data...",
-      "Please contact support..."
-    ],
-    "inherits_from": "revrebel_core",
-    "overrides": ["formality", "use_of_I_we"],
-    "status": "active"
-  }
+// "Find logos with retro-tech aesthetic"
+async function textToAssetSearch(
+  query: string,
+  assetType: string
+) {
+  const queryEmbedding = await generateTextEmbedding(query);
+  
+  const response = await fetch(
+    `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/search`,
+    {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        collectionName: 'prod_asset_embeddings',
+        data: [queryEmbedding],
+        limit: 10,
+        filter: `asset_type == "${assetType}" && status == "active"`,
+        outputFields: ['url', 'visual_tags', 'color_palette']
+      })
+    }
+  );
+  
+  const results = await response.json();
+  
+  return results.data.map(item => ({
+    assetId: item.id,
+    url: item.url,
+    similarity: item.distance,
+    visualTags: item.visual_tags
+  }));
 }
 ```
 
-```json
-{
-  "id": "persona-support-helpful",
-  "text": "Support voice is patient, helpful, and empathetic. Use second-person perspective, break down complex steps, and validate user frustrations. Think helpful friend meets technical expert.",
-  "metadata": {
-    "persona_id": "revrebel_support",
-    "persona_version": "v2.0",
-    "tone": "helpful, patient, empathetic",
-    "use_case": "help docs, support tickets, troubleshooting",
-    "formality": "casual-professional",
-    "example_phrases": [
-      "Let's walk through this together...",
-      "I understand that can be frustrating. Here's what to do...",
-      "Great question! Here's how that works..."
-    ],
-    "avoid_phrases": [
-      "This is obvious...",
-      "You should have...",
-      "RTFM"
-    ],
-    "inherits_from": "revrebel_core",
-    "overrides": ["humor_level", "technical_depth"],
-    "status": "active"
-  }
-}
-```
-
-**Query Pattern:**
-
+**2. Visual Similarity Search**
 ```typescript
-// Fetch appropriate persona based on context
-async function getContextualPersona(context: string, env: Env) {
-  const personaMap = {
-    'keynote': 'revrebel_founder',
-    'support': 'revrebel_support',
-    'technical': 'revrebel_technical',
-    'sales': 'revrebel_sales',
-    'social': 'revrebel_social',
-    'default': 'revrebel_core'
+// "Find photos similar to this reference image"
+async function visualSimilaritySearch(
+  referenceAssetId: string,
+  targetAssetType: string
+) {
+  // First, get the reference asset's vector
+  const getResponse = await fetch(
+    `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/get`,
+    {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        collectionName: 'prod_asset_embeddings',
+        id: [referenceAssetId],
+        outputFields: ['vector']
+      })
+    }
+  );
+  
+  const refData = await getResponse.json();
+  if (!refData.data || refData.data.length === 0) {
+    throw new Error('Reference asset not found');
+  }
+  
+  const refVector = refData.data[0].vector;
+  
+  // Now search for similar assets
+  const searchResponse = await fetch(
+    `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/search`,
+    {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        collectionName: 'prod_asset_embeddings',
+        data: [refVector],
+        limit: 11,  // +1 to account for self-match
+        filter: `asset_type == "${targetAssetType}" && status == "active"`,
+        outputFields: ['url', 'visual_tags']
+      })
+    }
+  );
+  
+  const results = await searchResponse.json();
+  
+  return results.data
+    .filter(item => item.id !== referenceAssetId)
+    .map(item => ({
+      assetId: item.id,
+      url: item.url,
+      similarity: item.distance,
+      visualTags: item.visual_tags
+    }));
+}
+```
+
+**3. Cross-Modal Discovery**
+```typescript
+// "Find all assets matching arcade-era clarity vibe"
+async function crossModalSearch(
+  vibe: string,
+  env: Env
+) {
+  const vibeEmbedding = await generateTextEmbedding(vibe);
+  
+  const results = await env.PROD_ASSETS.query(vibeEmbedding, {
+    topK: 20,
+    filter: {
+      status: 'active',
+      asset_type: ['logo', 'photo', 'graphic', 'video']
+    }
+  });
+  
+  // Group by asset type
+  const grouped = results.matches.reduce((acc, match) => {
+    const type = match.metadata.asset_type;
+    if (!acc[type]) acc[type] = [];
+    acc[type].push({
+      url: match.metadata.url,
+      description: match.metadata.description,
+      similarity: match.score
+    });
+    return acc;
+  }, {} as Record<string, any[]>);
+  
+  return grouped;
+}
+```
+
+**4. Style Transfer Query**
+```typescript
+// "Find photos that match our primary logo's aesthetic"
+async function styleTransferQuery(
+  sourceAssetId: string,
+  targetAssetType: string,
+  env: Env
+) {
+  const sourceVector = await env.PROD_ASSETS.getByIds([sourceAssetId]);
+  
+  const results = await env.PROD_ASSETS.query(sourceVector[0].values, {
+    topK: 15,
+    filter: {
+      asset_type: targetAssetType,
+      status: 'active'
+    }
+  });
+  
+  return results.matches.map(m => ({
+    url: m.metadata.url,
+    visualTags: m.metadata.visual_tags,
+    colorPalette: m.metadata.color_palette,
+    styleSimilarity: m.score
+  }));
+}
+```
+
+### Integration with Existing Indexes
+
+**Hybrid Knowledge + Asset Query:**
+```typescript
+// Combined documentation + visual asset retrieval
+async function hybridKnowledgeAssetQuery(
+  userQuery: string,
+  env: Env
+) {
+  const embedding = await generateTextEmbedding(userQuery);
+  
+  // Query 1: Knowledge base
+  const knowledge = await env.PROD_DOCS.query(embedding, {
+    topK: 5,
+    filter: { domain: 'visual-identity' }
+  });
+  
+  // Query 2: Visual assets
+  const assets = await env.PROD_ASSETS.query(embedding, {
+    topK: 5,
+    filter: { asset_type: 'logo' }
+  });
+  
+  // Query 3: Persona voice
+  const voice = await env.PERSONA_REVREBEL.query(embedding, {
+    topK: 2,
+    filter: { submodule: 'Visual Identity' }
+  });
+  
+  return {
+    documentation: knowledge.matches,
+    relatedAssets: assets.matches,
+    voiceGuidance: voice.matches
   };
-  
-  const personaId = personaMap[context] || personaMap.default;
-  
-  return await env.PERSONA.query(embedding, {
-    filter: { 
-      persona_id: personaId,
-      status: "active"
-    }
-  });
 }
 ```
 
-**Benefits:**
-- Maintains brand consistency while allowing contextual flexibility
-- Prevents support docs from sounding like sales pitches
-- Enables appropriate tone for each customer journey stage
+### Implementation Phases
 
-<br>
+**Phase 1: Pilot (Logos Only)**
+- Embed existing logo library from Cloudinary
+- Validate search quality and performance
+- Establish baseline metadata schema
+- Test text → logo and logo → logo queries
 
-### 5. A/B Testing Framework
+**Phase 2: Expansion (Photos & Graphics)**
+- Extend to brand photography
+- Add graphic elements and icons
+- Implement cross-modal search
+- Validate style transfer queries
 
-Track experimental voice variations to enable data-driven persona evolution.
+**Phase 3: Advanced (Video & Audio)**
+- Add video keyframe embeddings
+- Implement audio signature search
+- Build multi-modal recommendation engine
+- Enable complex fusion strategies
 
-**Schema Addition:**
-
-```json
-{
-  "id": "voice-witty-increased-test",
-  "text": "EXPERIMENTAL: Increased wit and pop culture references. More sentence fragments, bolder metaphors, heavier use of retro-tech analogies.",
-  "metadata": {
-    "persona_version": "v2.1-experimental",
-    "experiment_id": "tone-test-001",
-    "experiment_name": "Increased Wit Variant",
-    "hypothesis": "More wit will increase engagement on social media",
-    "variant": "witty-increased",
-    "control": "v2.0",
-    "test_start_date": "2025-11-01",
-    "test_end_date": "2025-11-30",
-    "sample_size_target": 1000,
-    "metrics": {
-      "engagement_rate": null,
-      "conversion_rate": null,
-      "sentiment_score": null,
-      "brand_recall": null
-    },
-    "status": "draft",
-    "approved_channels": ["twitter", "linkedin"],
-    "restricted_channels": ["support", "legal"]
-  }
-}
-```
-
-**Workflow:**
-
-1. **Create Experimental Variant:**
-   ```typescript
-   await env.PERSONA.insert({
-     id: `voice-${experimentId}`,
-     values: experimentEmbedding,
-     metadata: {
-       persona_version: "v2.1-experimental",
-       experiment_id: experimentId,
-       status: "draft"
-     }
-   });
-   ```
-
-2. **Run A/B Test:**
-   ```typescript
-   // Randomly assign users to control or variant
-   const persona = Math.random() < 0.5 
-     ? await getPersona("v2.0") // Control
-     : await getPersona("v2.1-experimental"); // Variant
-   ```
-
-3. **Collect Metrics:**
-   ```typescript
-   await logMetric(experimentId, {
-     engagement_rate: 0.042,
-     conversion_rate: 0.018,
-     sentiment_score: 0.72
-   });
-   ```
-
-4. **Promote or Deprecate:**
-   ```typescript
-   if (variantPerformance > controlPerformance) {
-     await promoteToActive("v2.1-experimental");
-     await deprecateVersion("v2.0");
-   }
-   ```
-
-**Benefits:**
-- Data-driven persona evolution
-- Reduces risk of brand voice changes
-- Enables gradual, validated improvements
-
-<br>
-
-### 6. Compliance & Legal Guardrails
-
-Flag content that requires legal review or has regulatory implications.
-
-**Schema Addition:**
-
-```json
-{
-  "id": "vm-claims-legal-review",
-  "text": "Marketing Claims — Must: Any performance guarantees, ROI promises, or competitive comparisons require legal review before publication.",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Matrix",
-    "attribute": "Marketing Claims",
-    "rule_type": "dont",
-    "severity": "must",
-    "legal_reviewed": true,
-    "legal_reviewer": "legal-team@revrebel.com",
-    "last_legal_review": "2025-10-01",
-    "compliance_tags": ["FTC", "advertising-standards"],
-    "restricted_terms": [
-      "guaranteed results",
-      "always increase revenue",
-      "never fail",
-      "best in industry"
-    ],
-    "requires_disclaimer": true,
-    "disclaimer_text": "Results may vary. Past performance does not guarantee future results.",
-    "violation_action": "block_publication",
-    "status": "active"
-  }
-}
-```
-
-**Restricted Term Detection:**
+### Validation Checklist
 
 ```typescript
-async function checkCompliance(content: string, env: Env) {
-  // Fetch compliance rules
-  const complianceRules = await env.PERSONA.query(contentEmbedding, {
-    filter: { 
-      compliance_tags: { $exists: true },
-      severity: "must"
+// Asset embedding health checks for Zilliz
+async function validateAssetEmbeddings() {
+  // Check 1: Get collection description
+  const descResponse = await fetch(
+    `${ZILLIZ_ENDPOINT}/v2/vectordb/collections/describe`,
+    {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        collectionName: 'prod_asset_embeddings'
+      })
     }
-  });
+  );
   
-  // Check for restricted terms
-  const violations = [];
-  for (const rule of complianceRules.matches) {
-    const restrictedTerms = rule.metadata.restricted_terms || [];
-    for (const term of restrictedTerms) {
-      if (content.toLowerCase().includes(term.toLowerCase())) {
-        violations.push({
-          rule_id: rule.id,
-          term: term,
-          action: rule.metadata.violation_action,
-          requires_review: rule.metadata.legal_reviewed
-        });
+  const collectionInfo = await descResponse.json();
+  console.log('Collection info:', collectionInfo);
+  
+  // Check 2: Query sample to verify structure
+  const sampleResponse = await fetch(
+    `${ZILLIZ_ENDPOINT}/v2/vectordb/entities/query`,
+    {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${ZILLIZ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        collectionName: 'prod_asset_embeddings',
+        filter: 'status == "active"',
+        limit: 10,
+        outputFields: ['url', 'asset_type', 'cdn_provider']
+      })
+    }
+  );
+  
+  const samples = await sampleResponse.json();
+  
+  // Check 3: Validate URLs exist
+  const assetsWithoutUrl = samples.data.filter(item => !item.url);
+  console.log(`Assets without URL: ${assetsWithoutUrl.length}`);
+  
+  // Check 4: Test CDN links (sample)
+  for (const asset of samples.data.slice(0, 5)) {
+    try {
+      const response = await fetch(asset.url, { method: 'HEAD' });
+      if (!response.ok) {
+        console.error(`Broken URL: ${asset.url}`);
       }
+    } catch (error) {
+      console.error(`Error checking URL ${asset.url}:`, error);
     }
   }
   
-  return violations;
+  return samples;
 }
 ```
 
-**Compliance Categories:**
+### Code Utilities
 
-| Category | Tags | Severity | Review Required |
-|----------|------|----------|-----------------|
-| **Marketing Claims** | FTC, advertising-standards | must | Yes |
-| **Data Privacy** | GDPR, CCPA, privacy | must | Yes |
-| **Financial Advice** | SEC, financial-regulations | must | Yes |
-| **Medical/Health** | FDA, health-claims | must | Yes |
-| **Accessibility** | ADA, WCAG | should | No |
+**Embedding Fusion:**
+```typescript
+function fuseEmbeddings(
+  visualEmb: number[],
+  textEmb: number[],
+  opts: { visualWeight: number; textWeight: number; method: string }
+): number[] {
+  if (opts.method === 'weighted_average') {
+    return visualEmb.map((v, i) => 
+      v * opts.visualWeight + textEmb[i] * opts.textWeight
+    );
+  }
+  
+  if (opts.method === 'concat') {
+    return [...visualEmb, ...textEmb];
+  }
+  
+  throw new Error(`Unknown fusion method: ${opts.method}`);
+}
+```
 
-**Benefits:**
-- Prevents legal liability
-- Automates compliance checking
-- Flags content for legal review before publication
+**Visual Tag Extraction:**
+```typescript
+async function extractVisualTags(imageUrl: string): Promise<string[]> {
+  // Use GPT-4V for image analysis
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_KEY}` },
+    body: JSON.stringify({
+      model: 'gpt-4-vision-preview',
+      messages: [{
+        role: 'user',
+        content: [
+          { 
+            type: 'text', 
+            text: 'List 5 visual style tags for this image (e.g., geometric, bold, minimal).' 
+          },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      }],
+      max_tokens: 100
+    })
+  });
+  
+  const tags = parseTagsFromResponse(await response.json());
+  return tags;
+}
+```
+
+**Color Palette Extraction:**
+```typescript
+async function extractDominantColors(
+  imageUrl: string, 
+  opts: { count: number }
+): Promise<string[]> {
+  // Use color quantization algorithm or service
+  const image = await loadImage(imageUrl);
+  const colors = await analyzeColorPalette(image, opts.count);
+  return colors.map(c => rgbToHex(c));
+}
+```
 
 <br>
 ---
 <br>
 
-## MAINTENANCE WORKFLOW
+## Index Validation & Health Checks
 
-Regular maintenance ensures the persona database remains accurate, consistent, and performant.
+Regular validation ensures your dev and prod indexes remain performant, consistent, and aligned with the latest schema.
 
-### Weekly Tasks
+### Routine Checks
 
-**1. Status Audit**
+| Validation Task                | Description                                                                       | Frequency   |
+| ------------------------------ | --------------------------------------------------------------------------------- | ----------- |
+| **Vector Count Check**         | Confirm expected # of entries per index (`wrangler vectorize stats`)              | Weekly      |
+| **Metadata Schema Validation** | Verify required fields exist (`domain`, `program`, `artifact_type`, `created_ym`) | Weekly      |
+| **Embedding Dimensionality**   | Ensure vector dimensions match model output (e.g., 384 or 768)                    | Each deploy |
+| **Drift Detection**            | Compare mean cosine similarity between dev and prod samples                       | Monthly     |
+| **Duplicate Detection**        | Hash text and confirm no duplicates per `doc_id`                                  | Monthly     |
+| **Embedding Latency Test**     | Measure average query latency (`vectorize query --benchmark`)                     | Monthly     |
+| **Namespace Scan**             | Confirm each namespace exists and is accessible                                   | Quarterly   |
+| **Backup Sync**                | Export embeddings to GCS or R2 for restore safety                                 | Quarterly   |
+
+<br>
+---
+<br>
+
+### Automated Validation Script (Example)
+
 ```bash
-# Check for entries still marked as "draft" after 30 days
-wrangler vectorize query persona:revrebel \
-  --filter '{"status":"draft","created_ym":{"$lte":"2025-09"}}' \
-  --topK 100
+#!/bin/bash
+# validate_collections.sh
+
+collections=(dev_doc_search prod_doc_search dev_recommendations prod_recommendations dev_asset_embeddings prod_asset_embeddings persona_revrebel)
+
+ZILLIZ_ENDPOINT="https://in03-9effbe09d86d9b7.serverless.gcp-us-west1.cloud.zilliz.com"
+ZILLIZ_API_KEY="YOUR_ZILLIZ_API_TOKEN"
+
+for collection in "${collections[@]}"; do
+  echo "Validating $collection..."
+  # Get collection stats
+  curl --request GET \
+    --url "${ZILLIZ_ENDPOINT}/v2/vectordb/collections/describe" \
+    --header "Authorization: Bearer ${ZILLIZ_API_KEY}" \
+    --header "Content-Type: application/json" \
+    --data "{\"collectionName\":\"${collection}\"}"
+  
+  echo ""
+done
 ```
 
-**2. Confidence Score Review**
-```typescript
-// Flag low-confidence entries for validation
-const lowConfidence = await env.PERSONA.query(embedding, {
-  filter: { 
-    confidence_score: { $lt: 0.65 }
-  }
-});
+<br>
+---
+<br>
 
-// Schedule for review
-for (const entry of lowConfidence.matches) {
-  await scheduleReview(entry.id, "confidence_validation");
-}
+### Health Metrics to Monitor
+
+* **`avg_query_latency`** < 100ms (for prod)
+* **`avg_cosine_similarity`** drift < ±0.03 between prod/dev
+* **`vector_count_delta`** < 2% between weeks (unless reindexing)
+* **`collection_size_growth`** < 15% month-over-month
+* **`entity_count`** matches expected document ingestion rate
+
+<br>
+---
+<br>
+
+## Metadata Schema (Asset Fields)
+
+| Field                 | Type   | Description                                                    |
+| --------------------- | ------ | -------------------------------------------------------------- |
+| `asset_type`          | string | Type of asset (logo, photo, graphic, video, audio)             |
+| `variant`             | string | Asset variant (primary, secondary, icon, stacked, circle)      |
+| `asset_id`            | string | Unique asset identifier                                        |
+| `url`                 | string | **REQUIRED** - CDN URL to actual asset                         |
+| `cdn_provider`        | string | CDN service (cloudinary, google-drive, r2, github)             |
+| `backup_url`          | string | Secondary storage URL for redundancy                           |
+| `format`              | string | File format (png, svg, jpg, ttf, mp4, wav, pdf)                |
+| `dimensions`          | string | Asset dimensions (e.g., "2400x800")                            |
+| `file_size_kb`        | number | File size in kilobytes                                         |
+| `duration_sec`        | number | Duration for audio/video assets                                |
+| `color_depth`         | string | Color depth (e.g., "24bit")                                    |
+| `visual_tags`         | array  | Visual characteristics (e.g., ["geometric", "bold"])           |
+| `color_palette`       | array  | Dominant colors (e.g., ["#163666", "#047C97"])                 |
+| `mood`                | string | Emotional tone (e.g., "professional-rebellious")               |
+| `style_era`           | string | Design era (e.g., "arcade", "retro-future")                    |
+| `embedding_model`     | string | Model used for visual/audio embedding                          |
+| `embedding_dimension` | number | Vector dimension (512, 768, 1024)                              |
+| `text_embedding_model`| string | Model used for text embedding                                  |
+| `fusion_method`       | string | Embedding combination method (weighted_average, concat)        |
+| `visual_weight`       | number | Weight for visual embedding in fusion (0.0-1.0)                |
+| `text_weight`         | number | Weight for text embedding in fusion (0.0-1.0)                  |
+| `approval_status`     | string | Approval state (approved, review, draft)                       |
+
+<br>
+---
+<br>
+
+## Metadata Schema (Universal Fields)
+
+| Field             | Type   | Description                                               |
+| ----------------- | ------ | --------------------------------------------------------- |
+| `domain`          | string | Primary content category (e.g., coding, design, strategy) |
+| `program`         | string | System or app area (e.g., webflow, budibase, n8n)         |
+| `artifact_type`   | string | Content type (e.g., howto, checklist, prompt)             |
+| `created_ym`      | string | Creation month (`YYYY-MM`)                                |
+| `source_url`      | string | Document origin (Drive, GitHub, etc.)                     |
+| `doc_id`          | string | Unique document identifier                                |
+| `version`         | string | Version of the document                                   |
+| `property_code`   | string | Hotel or client identifier (e.g., DENPOP, SEAPOP)         |
+| `data_kind`       | string | Defines the nature of the stored data helping segment content by data modality. <br> (e.g., `document`, `summary`, `image`, `metric`). |
+| `lifecycle`       | string | Indicates the maturity or stage of the data, useful for retention rules and surfacing current material. <br> (`draft`, `review`, `published`, `archived`).  |
+| `sensitivity`     | string | Flags data privacy/security classification and enables compliance filtering. <br> (`public`, `internal`, `confidential`, `restricted`). |
+| `program_lang`    | string | Specifies the programming or query language relevant to the entry. This assists in filtering technical snippets. <br> (`js`, `ts`, `sql`, `python`, `none`). |
+| `system_area`     | string | Defines the technical or business subsystem providing context for routing and categorization.  <br> (`webflow`, `budibase`, `n8n`, `cms`, `analytics`).  |
+| `created_ym`      | string | Creation month in `yyyy-MM` format |                                    
+| `last_updated `      | string | Last date updated in `yyyy-MM-dd` format |                                        
+
+<br>
+---
+<br>
+
+## Metadata Schema (Persona Fields)
+
+<br>
+
+See **REVREBEL_PersonaIndexReference.md** Document
+
+<br>
+---
+<br>
+
+## Summary
+
+| Category        | Index                    | Focus                        | Environment |
+| --------------- | ------------------------ | ---------------------------- | ----------- |
+| Documents       | dev-doc-search           | Test/document retrieval      | Dev         |
+| Documents       | prod-doc-search          | Live/document retrieval      | Prod        |
+| Recommendations | dev-recommendations      | Experimental rec engine      | Dev         |
+| Recommendations | prod-recommendations     | Live rec engine              | Prod        |
+| Assets          | dev-asset-embeddings     | Test/visual-audio embeddings | Dev         |
+| Assets          | prod-asset-embeddings    | Live/asset discovery         | Prod        |
+| Persona         | persona:revrebel         | Voice and tone embeddings    | Core        |
+
+<br>
+
+### Why This Architecture Works
+
+* Keeps experimental (dev) data isolated from live production
+* Separates factual retrieval from creative similarity
+* Maintains modular persona memory for consistent brand tone
+* **Separates asset storage (CDN) from semantic search (vectors)**
+* **Enables multi-modal discovery without storing binaries**
+* Simplifies versioning and schema validation
+* Enables automated health monitoring and regression detection
+
+### Total System Footprint
+
+```
+Expected Vector Database Size:
+- Documents (prod-doc-search): ~50MB (10K docs)
+- Recommendations (prod-recommendations): ~20MB (5K items)
+- Assets (prod-asset-embeddings): ~30MB (10K assets)
+- Persona (persona:revrebel): ~5MB (1K voice records)
+
+Total: ~105MB for 26K+ vectors
+
+Compared to storing assets directly:
+- 10K assets at 2MB average: 20GB
+- Vector approach is 190x more efficient
 ```
 
-**3. Cross-Reference Validation**
-```typescript
-// Check that related_examples still exist
-const entriesWithRefs = await getAllEntriesWithReferences();
-for (const entry of entriesWithRefs) {
-  const brokenRefs = await validateReferences(entry.metadata.related_examples);
-  if (brokenRefs.length > 0) {
-    await flagForUpdate(entry.id, { broken_refs: brokenRefs });
-  }
-}
-```
+<br>
+---
+<br>
 
-### Monthly Tasks
+## Zilliz API Endpoints Reference
+<br>
 
-**1. Version Cleanup**
-- Review deprecated entries older than 6 months
-- Archive to separate cold storage if no longer referenced
-- Update documentation with version change log
-
-**2. A/B Test Analysis**
-```typescript
-// Analyze ongoing experiments
-const activeExperiments = await env.PERSONA.query(embedding, {
-  filter: { 
-    experiment_id: { $exists: true },
-    status: "draft"
-  }
-});
-
-for (const experiment of activeExperiments.matches) {
-  const metrics = await getExperimentMetrics(experiment.metadata.experiment_id);
-  if (metrics.significance > 0.95) {
-    await promoteOrDeprecate(experiment, metrics);
-  }
-}
-```
-
-**3. Compliance Review**
-```typescript
-// Re-validate legal reviewed content
-const legalContent = await env.PERSONA.query(embedding, {
-  filter: { 
-    legal_reviewed: true,
-    last_legal_review: { $lt: sixMonthsAgo }
-  }
-});
-
-await notifyLegalTeam(legalContent.matches);
-```
-
-### Quarterly Tasks
-
-**1. Persona Version Audit**
-- Evaluate if major version bump is needed
-- Gather feedback from content teams
-- Run sentiment analysis on content generated with current persona
-- Plan transition strategy if update warranted
-
-**2. Contextual Persona Review**
-- Validate sub-personas are still appropriate
-- Check for new contexts requiring dedicated personas
-- Ensure inheritance relationships are correct
-
-**3. Performance Optimization**
+### Insert Entities (Single or Batch)
 ```bash
-# Analyze query patterns
-wrangler vectorize stats persona:revrebel
+POST /v2/vectordb/entities/insert
+Authorization: Bearer YOUR_ZILLIZ_API_KEY
+Content-Type: application/json
 
-# Check for:
-# - Most queried entries (cache candidates)
-# - Rarely queried entries (deprecation candidates)
-# - Query latency trends
-```
-
-### Automation Recommendations
-
-```typescript
-// Automated health check script
-async function personaHealthCheck(env: Env) {
-  const checks = {
-    total_entries: 0,
-    active_entries: 0,
-    deprecated_entries: 0,
-    draft_entries: 0,
-    low_confidence_entries: 0,
-    broken_references: 0,
-    stale_legal_reviews: 0,
-    active_experiments: 0
-  };
-  
-  // Run all checks
-  checks.total_entries = await countAllEntries();
-  checks.active_entries = await countByStatus("active");
-  checks.deprecated_entries = await countByStatus("deprecated");
-  checks.draft_entries = await countByStatus("draft");
-  checks.low_confidence_entries = await countByConfidence({ $lt: 0.65 });
-  checks.broken_references = await validateAllReferences();
-  checks.stale_legal_reviews = await countStaleLegalReviews(6); // months
-  checks.active_experiments = await countActiveExperiments();
-  
-  // Alert if thresholds exceeded
-  if (checks.low_confidence_entries > 10) {
-    await alertTeam("High number of low-confidence entries");
-  }
-  
-  if (checks.stale_legal_reviews > 0) {
-    await alertLegal("Compliance content needs review");
-  }
-  
-  return checks;
+{
+  "collectionName": "prod_doc_search",
+  "data": [
+    {
+      "primary_key": "doc-001",
+      "vector": [0.123, 0.456, ...],
+      "domain": "coding",
+      "program": "webflow"
+    }
+  ]
 }
 ```
 
 <br>
----
-<br>
 
-## METADATA SCHEMA REFERENCE
+### Search Entities
+```bash
+POST /v2/vectordb/entities/search
+Authorization: Bearer YOUR_ZILLIZ_API_KEY
+Content-Type: application/json
 
-### Core Persona Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `persona_id` | string | Yes | Unique persona identifier (e.g., `revrebel_core`, `revrebel_founder`) |
-| `persona_version` | string | Yes | Semantic version (e.g., `v2.0`, `v2.1-experimental`) |
-| `module` | string | Yes | Top-level module (Brand Core, Brand Voice & Style, etc.) |
-| `submodule` | string | Yes | Specific submodule within module |
-| `status` | string | Yes | `active`, `deprecated`, or `draft` |
-| `tone` | string | No | Tone descriptors (e.g., `witty, confident, rebellious`) |
-| `use_case` | string | No | Primary application context |
-| `language` | string | Yes | Content language (default: `en`) |
-| `created_ym` | string | Yes | Creation date (YYYY-MM format) |
-| `author` | string | Yes | Creator identifier |
-
-### Extended Fields (Optional)
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `channel` | string | Specific channel (LinkedIn, Blog, Email, etc.) |
-| `platform` | string | Sub-platform (e.g., `linkedin` under `social`) |
-| `audience` | string | Target audience |
-| `funnel_stage` | string | Buyer journey stage |
-| `severity` | string | Rule importance (`must`, `should`, `prefer`, `avoid`, `never`) |
-| `confidence_score` | number | Certainty level (0.0-1.0) |
-| `weight` | number | Importance weighting (0.0-1.0) |
-
-### Relationship Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `related_examples` | array | Cross-references to other databases |
-| `use_case_refs` | array | Related use case documents |
-| `inherits_from` | string | Parent persona for sub-personas |
-| `overrides` | array | Attributes overridden from parent |
-| `supersedes` | array | Previous version IDs |
-| `superseded_by` | string | Newer version ID |
-
-### Temporal Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `valid_from` | string | ISO timestamp when record became active |
-| `valid_until` | string | ISO timestamp when record deprecated (null if active) |
-| `last_updated` | string | ISO timestamp of last modification |
-| `last_verified` | string | ISO timestamp of last review |
-
-### Compliance Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `legal_reviewed` | boolean | Has legal team reviewed |
-| `legal_reviewer` | string | Legal team member email |
-| `last_legal_review` | string | ISO timestamp of legal review |
-| `compliance_tags` | array | Regulatory categories (FTC, GDPR, etc.) |
-| `restricted_terms` | array | Terms that trigger violations |
-| `requires_disclaimer` | boolean | Needs legal disclaimer |
-
-### Experimental Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `experiment_id` | string | Unique experiment identifier |
-| `experiment_name` | string | Human-readable experiment name |
-| `variant` | string | Variant identifier |
-| `control` | string | Control version identifier |
-| `test_start_date` | string | ISO timestamp |
-| `test_end_date` | string | ISO timestamp |
-| `metrics` | object | Performance metrics (engagement, conversion, etc.) |
-
-<br>
----
-<br>
-
-
-
-
-## VERSION HISTORY
-
-| Version | Date | Changes | Author |
-|---------|------|---------|--------|
-| **v1.0** | 2025-08-15 | Initial persona structure | Brand Team |
-| **v1.5** | 2025-09-20 | Added Voice Matrix severity levels | Brand Team |
-| **v2.0** | 2025-10-28 | Added contextual personas, A/B testing, cross-database refs, compliance guardrails | Brand Team |
+{
+  "collectionName": "prod_doc_search",
+  "data": [[0.123, 0.456, ...]],
+  "limit": 10,
+  "filter": "domain == \"coding\" && program == \"webflow\"",
+  "outputFields": ["domain", "program", "artifact_type"]
+}
+```
 
 <br>
 
-**Last Updated:** 2025-10-28  
-**Maintained by:** REVREBEL Brand & Data Engineering  
-**File Name:** `revrebel_persona_index_reference.md`  
-**Version:** 2.0 (Added advanced features and maintenance workflows)
+### Query Entities (Filter-based)
+```bash
+POST /v2/vectordb/entities/query
+Authorization: Bearer YOUR_ZILLIZ_API_KEY
+Content-Type: application/json
+
+{
+  "collectionName": "prod_doc_search",
+  "filter": "domain == \"coding\"",
+  "limit": 100,
+  "outputFields": ["primary_key", "domain", "program"]
+}
+```
+
+<br>
+
+### Get Entities by ID
+```bash
+POST /v2/vectordb/entities/get
+Authorization: Bearer YOUR_ZILLIZ_API_KEY
+Content-Type: application/json
+
+{
+  "collectionName": "prod_doc_search",
+  "id": ["doc-001", "doc-002"],
+  "outputFields": ["vector", "domain", "program"]
+}
+```
+
+<br>
+
+### Describe Collection
+```bash
+POST /v2/vectordb/collections/describe
+Authorization: Bearer YOUR_ZILLIZ_API_KEY
+Content-Type: application/json
+
+{
+  "collectionName": "prod_doc_search"
+}
+```
+<br>
+
+**Last Updated:** 2025-10-28
+**Maintained by:** REVREBEL Data Engineering
+**File Name:** `revrebel_vectorize_reference.md`
+**Version:** 2.0 (Added multi-modal asset embeddings)

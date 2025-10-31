@@ -1,0 +1,783 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "REVREBEL Google Drive Actions",
+    "version": "2.0.0",
+    "description": "Upload/organize in Drive, get shareable URLs, search/read metadata, monitor activity, and sync with vector database using OAuth 2.0."
+  },
+  "servers": [
+    {
+      "url": "https://www.googleapis.com"
+    }
+  ],
+  "components": {
+   "schemas": {},
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+            "tokenUrl": "https://oauth2.googleapis.com/token",
+            "scopes": {
+              "https://www.googleapis.com/auth/drive": "Full access to Google Drive files and folders",
+              "https://www.googleapis.com/auth/drive.file": "Manage files created by this app",
+              "https://www.googleapis.com/auth/drive.metadata.readonly": "View metadata for all Drive files",
+              "https://www.googleapis.com/auth/drive.activity.readonly": "View activity history for all Drive files"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "oauth2": [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/drive.activity.readonly"
+      ]
+    }
+  ],
+  "paths": {
+    "/drive/v3/files": {
+      "post": {
+        "operationId": "createFolder",
+        "summary": "Create a folder (Skill 1: Organize)",
+        "description": "Creates a folder in Google Drive for systematic organization. Nest folders by providing parent folder ID(s). Use this to organize assets by date, type, or project.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "mimeType"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Folder name (e.g., 'REVREBEL Assets / 2025-10')"
+                  },
+                  "mimeType": {
+                    "type": "string",
+                    "enum": [
+                      "application/vnd.google-apps.folder"
+                    ]
+                  },
+                  "parents": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Parent folder ID(s) to nest this folder"
+                  },
+                  "properties": {
+                    "type": "object",
+                    "description": "Custom metadata for categorization"
+                  }
+                }
+              },
+              "examples": {
+                "monthlyAssets": {
+                  "value": {
+                    "name": "2025-10 Assets",
+                    "mimeType": "application/vnd.google-apps.folder",
+                    "parents": [
+                      "1a2b3c4d5e6f7g8h9i0j"
+                    ],
+                    "properties": {
+                      "category": "assets",
+                      "created_by": "revrebel_ai"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Folder created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "searchFiles",
+        "summary": "Search files and read metadata (Skill 3: Search & Read)",
+        "description": "Search across all accessible drives. Returns comprehensive metadata including labels, properties, URLs, and categorization data. Use for discovering resources and building vector DB context.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Drive search query. Examples: 'name contains \"logo\"', 'mimeType contains \"image/\"', 'modifiedTime > \"2025-10-01\"'",
+            "example": "name contains 'brand' and mimeType contains 'image/'"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageToken",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Token for pagination from previous response"
+          },
+          {
+            "in": "query",
+            "name": "corpora",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user",
+                "drive",
+                "allDrives"
+              ],
+              "default": "allDrives"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeItemsFromAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "type": "string",
+              "default": "files(id,name,mimeType,parents,owners,iconLink,thumbnailLink,createdTime,modifiedTime,webViewLink,webContentLink,properties,appProperties,labelInfo,description,fileExtension,size),nextPageToken"
+            },
+            "description": "Fields to include in response. Default includes URLs, metadata, labels, and properties."
+          },
+          {
+            "in": "query",
+            "name": "orderBy",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sort order (e.g., 'modifiedTime desc', 'name')",
+            "example": "modifiedTime desc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results with full metadata"
+          }
+        }
+      }
+    },
+    "/upload/drive/v3/files": {
+      "post": {
+        "operationId": "uploadFile",
+        "summary": "Upload a file (Skill 1: Upload & Save)",
+        "description": "Uploads binary content with metadata to Drive. Use multipart upload for files with content. Automatically organizes into specified parent folder.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "uploadType",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "multipart"
+              ],
+              "default": "multipart"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/related": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "metadata",
+                  "file"
+                ],
+                "properties": {
+                  "metadata": {
+                    "type": "string",
+                    "description": "JSON string: {\"name\":\"logo.png\",\"parents\":[\"folderId\"],\"mimeType\":\"image/png\",\"properties\":{\"vector_db_id\":\"asset_001\"}}"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Binary file content"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "webViewLink": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/drive/v3/files/{fileId}": {
+      "get": {
+        "operationId": "getFile",
+        "summary": "Get file URLs and metadata (Skill 2: Get URLs)",
+        "description": "Returns webViewLink, webContentLink, and complete metadata for a specific file. Use this to get shareable URLs for vector DB storage.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "File ID from upload or search"
+          },
+          {
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "type": "string",
+              "default": "id,name,mimeType,webViewLink,webContentLink,iconLink,thumbnailLink,parents,labelInfo,properties,appProperties,createdTime,modifiedTime,size,description"
+            },
+            "description": "Metadata fields to return"
+          },
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File metadata with all URLs"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateFileMetadata",
+        "summary": "Update file metadata and properties (Skill 2: Write Vector IDs Back)",
+        "description": "Updates file metadata, custom properties, and appProperties. Use this to write vector DB IDs, embedding hashes, and categorization tags back to Drive files.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Update file name"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "File description"
+                  },
+                  "properties": {
+                    "type": "object",
+                    "description": "Public custom properties (visible to all apps with Drive access)",
+                    "example": {
+                      "vector_db_id": "prod_asset_001",
+                      "collection": "prod_asset_embeddings",
+                      "embedding_model": "clip-vit-base-patch32",
+                      "last_embedded": "2025-10-28"
+                    }
+                  },
+                  "appProperties": {
+                    "type": "object",
+                    "description": "Private properties (only visible to this app)",
+                    "example": {
+                      "vector_id": "persona_revrebel_v2_001",
+                      "sync_status": "synced",
+                      "embedding_hash": "abc123def456"
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "syncVectorDB": {
+                  "value": {
+                    "appProperties": {
+                      "vector_db_id": "prod_asset_001",
+                      "collection": "prod_asset_embeddings",
+                      "last_synced": "2025-10-28T15:30:00Z",
+                      "embedding_hash": "sha256:abc123"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Metadata updated successfully"
+          }
+        }
+      }
+    },
+    "/drive/v3/files/{fileId}/permissions": {
+      "post": {
+        "operationId": "makePublicLink",
+        "summary": "Create share permission (Skill 2: Make URLs Public)",
+        "description": "Sets public read permission so webViewLink/webContentLink work externally. Required for sharing assets via URLs stored in vector DB.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role",
+                  "type"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "reader",
+                      "commenter",
+                      "writer"
+                    ],
+                    "default": "reader"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "anyone",
+                      "user",
+                      "group",
+                      "domain"
+                    ]
+                  },
+                  "emailAddress": {
+                    "type": "string",
+                    "description": "Email for user/group type"
+                  },
+                  "domain": {
+                    "type": "string",
+                    "description": "Domain for domain type"
+                  },
+                  "allowFileDiscovery": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Allow file to be discovered by search"
+                  }
+                }
+              },
+              "examples": {
+                "publicReader": {
+                  "value": {
+                    "role": "reader",
+                    "type": "anyone",
+                    "allowFileDiscovery": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permission created"
+          }
+        }
+      },
+      "get": {
+        "operationId": "listPermissions",
+        "summary": "List file permissions",
+        "description": "Get all permissions for a file to verify sharing status.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of permissions"
+          }
+        }
+      }
+    },
+    "/drive/v3/changes": {
+      "get": {
+        "operationId": "listChanges",
+        "summary": "Monitor file changes (Skill 4: Activity Monitoring)",
+        "description": "Lists changes to files and folders since a specific point in time. Use this to monitor workspace activity, detect new uploads, deletions, permission changes, and modifications. Essential for keeping vector DB in sync.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "pageToken",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Token from changes/startPageToken or previous changes list. Represents the point in time to start monitoring from."
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "maximum": 1000
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeItemsFromAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeRemoved",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "Include deleted files in changes"
+          },
+          {
+            "in": "query",
+            "name": "restrictToMyDrive",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "type": "string",
+              "default": "changes(changeType,time,removed,fileId,file(id,name,mimeType,parents,modifiedTime,webViewLink,properties,appProperties)),newStartPageToken,nextPageToken"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of changes with change type, timestamps, and file details"
+          }
+        }
+      }
+    },
+    "/drive/v3/changes/startPageToken": {
+      "get": {
+        "operationId": "getStartPageToken",
+        "summary": "Get starting token for monitoring (Skill 4: Initialize Monitoring)",
+        "description": "Returns a token representing the current state of Drive. Use this token to start monitoring changes from this point forward. Call this once to initialize, then use the token with listChanges.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "supportsAllDrives",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "driveId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Shared drive ID if monitoring a specific shared drive"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Start page token for monitoring"
+          }
+        }
+      }
+    },
+    "/drive/v3/files/{fileId}/modifyLabels": {
+      "post": {
+        "operationId": "modifyLabels",
+        "summary": "Add/remove Drive labels (Skill 3: Categorization)",
+        "description": "Modify Drive labels for categorization. Labels are structured metadata that can represent asset types, approval status, project associations, etc. More powerful than custom properties for complex categorization.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "labelModifications": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "labelId": {
+                          "type": "string",
+                          "description": "Label ID to modify"
+                        },
+                        "fieldModifications": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "fieldId": {
+                                "type": "string"
+                              },
+                              "setTextValues": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "setIntegerValues": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer"
+                                }
+                              },
+                              "setSelectionValues": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "unsetValues": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        },
+                        "removeLabel": {
+                          "type": "boolean",
+                          "description": "Remove entire label"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "addAssetType": {
+                  "value": {
+                    "labelModifications": [
+                      {
+                        "labelId": "labelId_asset_type",
+                        "fieldModifications": [
+                          {
+                            "fieldId": "type",
+                            "setSelectionValues": [
+                              "logo"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Labels modified successfully"
+          }
+        }
+      }
+    },
+    "/drive/v3/files/{fileId}/listLabels": {
+      "get": {
+        "operationId": "listLabels",
+        "summary": "List labels on a file (Skill 3: Read Categorization)",
+        "description": "Get all labels applied to a file for reading categorization metadata.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxResults",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of labels with field values"
+          }
+        }
+      }
+    },
+    "/drive/v3/about": {
+      "get": {
+        "operationId": "getAbout",
+        "summary": "Get Drive information and quotas",
+        "description": "Returns information about the Drive, including storage quota, user info, and capabilities.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "fields",
+            "schema": {
+              "type": "string",
+              "default": "user,storageQuota,importFormats,exportFormats,maxUploadSize,maxImportSizes,teamDriveThemes,canCreateTeamDrives,canCreateDrives"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Drive information"
+          }
+        }
+      }
+    }
+  }
+}
