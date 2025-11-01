@@ -36,81 +36,54 @@ Contains BOTH?
 ### 1. Parse Input
 Extract: tone descriptors, module/submodule, channel, rule type, severity level
 
-### 2. Query Active Version
-```python
-active_version = query_persona(
-    filter={"status": "active", "persona_id": "revrebel_core"}
-).metadata.persona_version
-```
+### Initial Analysis: Determine Record Type(s)
+When receiving brand input, **ALWAYS** apply this logic:
 
-### 3. Construct Payload(s)
+[User Input Received]
+    ↓
+Does it contain STRATEGIC/PHILOSOPHICAL content?
+    (tone philosophy, brand essence, conceptual guidance)
+    YES → Create CANONICAL PRINCIPLE
+    ↓
+Does it contain ACTIONABLE RULES?
+    (do/don't phrasing, behavioral constraints, specific instructions)
+    YES → Create VOICE MATRIX entries
+    ↓
+Does it contain BOTH?
+    YES → Create BOTH record types (Dual Classification)
 
-**Canonical Principle:**
-```json
-{
-  "id": "voice-{slug}",
-  "text": "[Narrative guidance]",
-  "metadata": {
-    "module": "[module_name]",
-    "submodule": "[submodule_name]",
-    "persona_id": "revrebel_core",
-    "persona_version": "[queried_version]",
-    "tone": "[descriptive_words]",
-    "use_case": "[application]",
-    "status": "active",
-    "created_ym": "[YYYY-MM]",
-    "language": "en"
-  }
-}
-```
+### Classification Decision Tree
 
-**Voice Matrix Entry:**
-```json
-{
-  "id": "vm-{attribute}-{do|dont}",
-  "text": "[Attribute] – [Do/Don't]: [Rule]",
-  "metadata": {
-    "module": "Brand Voice & Style",
-    "submodule": "Voice Matrix",
-    "attribute": "[name]",
-    "rule_type": "do|dont",
-    "severity": "must|should|prefer|avoid|never",
-    "example_good": "[positive_example]",
-    "example_bad": "[negative_example]",
-    "weight": [0.0-1.0],
-    "persona_version": "[queried_version]",
-    "status": "active"
-  }
-}
-```
+[Analyze Content Nature]
+    ↓
+    ├─ Describes WHO we are → Brand Core
+    │   └─ Submodules: Mission & Vision, Brand Values, Brand Purpose, 
+    │                   Brand Personality, Brand Archetype
+    │
+    ├─ Describes WHO we serve → Audience Insight
+    │   └─ Submodules: Demographics, Psychographics, Buyer Personas,
+    │                   Audience Tone Preferences
+    │
+    ├─ Describes WHAT we say → Brand Messaging System
+    │   └─ Submodules: Value Propositions, Brand Pillars, Taglines & Slogans,
+    │                   Messaging by Funnel Stage, Signature Phrases
+    │
+    ├─ Describes HOW we speak → Brand Voice & Style
+    │   └─ Submodules: Voice Principles, Voice Matrix, Grammar Rules,
+    │                   Sentence Structures, Tone Variations, Tone by Channel
+    │
+    ├─ Describes what we LOOK like → Visual Identity System
+    │   └─ Submodules: Logos, Brand Colors, Typography, Image Style,
+    │                   Design Do's & Don'ts, Moodboards
+    │
+    ├─ Compares/positions us → Brand Comparison & Inspiration
+    │   └─ Submodules: Brand Emulators, Analogies & Metaphors,
+    │                   Tone Benchmarks, Differentiators
+    │
+    └─ Application-specific → Tactical Brand Usage
+        └─ Submodules: Use Cases, Touchpoint Guidance,
+                       Common Mistakes, Template Outputs
 
-### 4. Confidence Check
-- **High** (clear module, tone, rule type) → Auto-commit
-- **Medium** (minor ambiguity) → Show preview, ask confirmation
-- **Low** (cannot determine classification) → Ask clarifying questions
-
-**Auto-commit IF:**
-- Module/submodule unambiguous
-- Tone/attribute clearly identified  
-- Rule type explicit (for Matrix)
-- Text clean and formatted
-
-**Preview IF:**
-- Classification ambiguous
-- Contains >3 sentences (Canonical)
-- Multiple rules need atomizing
-- User says "preview", "confirm", or "check"
-
-### 5. Execute Upsert
-```python
-# Single entry
-await env.PERSONA_REVREBEL.insert([payload])
-
-# Dual classification
-await env.PERSONA_REVREBEL.insert([canonical_payload, *matrix_payloads])
-```
-
----
 
 ## Response Templates
 

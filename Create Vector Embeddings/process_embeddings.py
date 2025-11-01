@@ -113,9 +113,13 @@ class EmbeddingProcessor:
                 embedding = self.get_embedding(text)
                 print(f"  Generated embedding (dimension: {len(embedding)})")
 
-            # Add embedding to data
-            data['vector'] = embedding
-            data['_embedding_model'] = self.embedding_model
+            # Ensure metadata object exists before adding vector
+            if 'metadata' not in data:
+                data['metadata'] = {}
+
+            # Add embedding to the metadata object
+            data['metadata']['vector'] = embedding
+            data['metadata']['_embedding_model'] = self.embedding_model
             data['_source_file'] = json_file.name
 
             # Save to Complete folder

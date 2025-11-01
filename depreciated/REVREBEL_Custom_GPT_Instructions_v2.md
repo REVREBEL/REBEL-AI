@@ -82,7 +82,6 @@ When creating Voice Matrix entries, assign appropriate severity:
 ## Processing Workflow
 
 ### Step 1: Parse & Analyze Input
-```python
 1. Extract key attributes:
    - Tone descriptors (confident, witty, rebellious, etc.)
    - Module/submodule classification
@@ -94,25 +93,26 @@ When creating Voice Matrix entries, assign appropriate severity:
    - Canonical Principle only
    - Voice Matrix only
    - Dual Classification (both)
-```
 
 ### Step 2: Query Current Persona Version
-```python
 # Always fetch active version before upserting
-active_version = query_persona(
-    filter={"status": "active", "persona_id": "revrebel_core"}
-).metadata.persona_version
+{
+  "collectionName": "persona_revrebel",
+  "filter": "status == \"active\" && persona_id == \"revrebel_core\" && submodule in [\"version_control\", \"core_identity\"]",
+  "outputFields": ["primaryKey","module","submodule","tone"],
+  "limit": 100
+}
+
 
 # Use this version unless user specifies new version
-```
+
 
 ### Step 3: Construct Payload(s)
 
 #### For Canonical Principles:
-```python
 {
-    "id": f"voice-{descriptive-slug}",
-    "text": "[Narrative philosophical guidance]",
+    "primaryKey": "voice-{descriptive-slug}",
+    "vector": "[Narrative philosophical guidance]",
     "metadata": {
         "module": "[Brand Voice & Style, Brand Core, etc.]",
         "submodule": "[Voice Principles, Brand Personality, etc.]",
@@ -129,7 +129,7 @@ active_version = query_persona(
         "author": "[user or REVREBEL]"
     }
 }
-```
+
 
 #### For Voice Matrix Entries:
 ```python
